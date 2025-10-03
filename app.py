@@ -7,8 +7,10 @@ import os
 import uuid
 import base64
 import shutil
+import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List
+from datetime import datetime
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -45,9 +47,14 @@ BASE_DIR = Path(__file__).parent
 INPUT_DIR = BASE_DIR / "input"
 RESULT_DIR = BASE_DIR / "result"
 STATIC_DIR = BASE_DIR / "static"
+SESSIONS_DIR = BASE_DIR / "sessions"
 INPUT_DIR.mkdir(exist_ok=True)
 RESULT_DIR.mkdir(exist_ok=True)
 STATIC_DIR.mkdir(exist_ok=True)
+SESSIONS_DIR.mkdir(exist_ok=True)
+
+# Session storage (in-memory for simplicity, could use database)
+sessions: Dict[str, Dict] = {}
 
 # 掛載靜態檔案目錄
 app.mount("/images", StaticFiles(directory=str(RESULT_DIR)), name="images")
@@ -283,6 +290,114 @@ def health_check():
     return {
         "status": "healthy",
         "api_key_set": bool(GOOGLE_API_KEY)
+    }
+
+
+@app.post("/api/session/create")
+async def create_session():
+    """
+    建立新的設計 session
+    
+    Returns:
+        dict: 包含 session_id 的字典
+    """
+    session_id = f"sess_{uuid.uuid4().hex[:12]}"
+    sessions[session_id] = {
+        "id": session_id,
+        "created_at": datetime.now().isoformat(),
+        "history": [],
+        "furniture_placements": []
+    }
+    
+    # 儲存到檔案
+    session_file = SESSIONS_DIR / f"{session_id}.json"
+    with open(session_file, "w") as f:
+        json.dump(sessions[session_id], f, indent=2)
+    
+    return {
+        "status": "success",
+        "session_id": session_id
+    }
+
+
+@app.get("/api/session/{session_id}")
+async def get_session(session_id: str):
+    """
+    取得 session 資料
+    
+    Args:
+        session_id: Session ID
+        
+    Returns:
+        dict: Session 資料
+    """
+    # 先從記憶體查找
+    if session_id in sessions:
+        return {
+            "status": "success",
+            "session": sessions[session_id]
+        }
+    
+    # 從檔案載入
+    session_file = SESSIONS_DIR / f"{session_id}.json"
+    if session_file.exists():
+        with open(session_file, "r") as f:
+            session_data = json.load(f)
+            sessions[session_id] = session_data
+            return {
+                "status": "success",
+                "session": session_data
+            }
+    
+    raise HTTPException(status_code=404, detail="Session not found")
+
+
+@app.post("/api/session/{session_id}/update")
+async def update_session(
+    session_id: str,
+    history: Optional[List[str]] = Form(None),
+    furniture_placements: Optional[str] = Form(None)
+):
+    """
+    更新 session 資料
+    
+    Args:
+        session_id: Session ID
+        history: 圖片歷史記錄
+        furniture_placements: 家具放置記錄 (JSON string)
+        
+    Returns:
+        dict: 更新結果
+    """
+    if session_id not in sessions:
+        # 嘗試從檔案載入
+        session_file = SESSIONS_DIR / f"{session_id}.json"
+        if session_file.exists():
+            with open(session_file, "r") as f:
+                sessions[session_id] = json.load(f)
+        else:
+            raise HTTPException(status_code=404, detail="Session not found")
+    
+    # 更新資料
+    if history:
+        sessions[session_id]["history"] = history
+    
+    if furniture_placements:
+        try:
+            sessions[session_id]["furniture_placements"] = json.loads(furniture_placements)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid furniture_placements JSON")
+    
+    sessions[session_id]["updated_at"] = datetime.now().isoformat()
+    
+    # 儲存到檔案
+    session_file = SESSIONS_DIR / f"{session_id}.json"
+    with open(session_file, "w") as f:
+        json.dump(sessions[session_id], f, indent=2)
+    
+    return {
+        "status": "success",
+        "session": sessions[session_id]
     }
 
 

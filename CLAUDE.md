@@ -4,8 +4,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-此專案是簡化版的 Nano Banana API - 一個使用 Google Gemini 2.5 Flash 進行圖像編輯的 FastAPI 服務。
+此專案是一個室內設計網站，使用 Nano Banana API（Google Gemini 2.5 Flash）進行圖像編輯的 FastAPI 服務。
 整合圖像上傳、AI 處理和靜態檔案服務於單一應用程式中，專為 localhost 本地運行設計。
+
+### 室內設計網站功能
+
+**核心功能：**
+- 使用者可以透過拖放方式放置家具（沙發等物件）
+- 可以搭配文字說明來描述設計需求
+- 每次進入網頁會產生一個 session ID 用於追蹤創作過程
+- 使用者可以分享臨時 ID 來展示創作過程
+
+**起始場景：**
+- 提供四個起始圖供選擇：space.png, moon.png, mars.png, ship.png（800x600）
+- 選擇的起始圖會成為 history 的第一張圖
+
+**左側面板（對話區）：**
+- Dr. Bubu 對話視窗，包含頭像（100x100）和對話文字框
+- `dr_talk(text)` 函數：逐字顯示文字效果
+- 文字輸入區（textarea）供使用者輸入需求
+- Submit 按鈕：
+  - 有修改時為彩色
+  - 送出後變灰色
+  - 觸發 Nano Banana API 呼叫
+
+**右側主畫面：**
+- Canvas 顯示當前圖片（history 最後一張）
+- 上層 Canvas 用於家具拖放操作
+- 家具清單：可捲動的家具圖片列表（item1.png ~ item20.png）
+- 家具放置記錄 array：記錄每個家具的坐標位置
+
+**圖片生成流程：**
+1. 使用者按下 submit
+2. 生成一個 canvas，包含：
+   - History 最後一張圖作為背景
+   - 每個家具位置用箭頭和線條標示
+3. 將此 canvas 轉為 PNG 送給 Nano Banana edit API
+4. 顯示半透明 overlay + 施工中圖片 + "產生中 請等待" 文字
+5. API 回傳後，新圖加入 history
+6. 清空家具放置記錄和 textarea
+7. Dr. Bubu 說："Construction complete. Here is your new home."
 
 ## 系統架構
 

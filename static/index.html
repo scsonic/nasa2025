@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nano Banana - AI 圖像編輯</title>
+    <title>Space Interior Designer - Nano Banana</title>
     <style>
         * {
             margin: 0;
@@ -13,316 +13,661 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
         }
         
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 800px;
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Starter Selection Modal */
+        .starter-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 40px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
         
-        h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .upload-area:hover {
-            border-color: #764ba2;
-            background: #f8f9ff;
-        }
-        
-        .upload-area.dragover {
-            border-color: #764ba2;
-            background: #f0f2ff;
-        }
-        
-        input[type="file"] {
+        .starter-modal.hidden {
             display: none;
         }
         
-        .upload-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
+        .starter-content {
+            text-align: center;
+            max-width: 900px;
+            padding: 40px;
         }
         
-        .form-group {
+        .starter-content h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .starter-content p {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            color: #aaa;
+        }
+        
+        .starter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .starter-option {
+            cursor: pointer;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .starter-option:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+        
+        .starter-option img {
+            width: 100%;
+            display: block;
+        }
+        
+        .starter-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.2em;
+        }
+        
+        /* Left Panel - Chat */
+        .left-panel {
+            width: 350px;
+            background: #1a1a2e;
+            border-right: 2px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .chat-header {
+            text-align: center;
             margin-bottom: 20px;
         }
         
-        label {
+        .chat-header h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        .dr-bubu-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .dr-bubu-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid #667eea;
+            flex-shrink: 0;
+        }
+        
+        .dr-bubu-message {
+            flex: 1;
+            background: #2a2a3e;
+            border-radius: 15px;
+            padding: 15px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+        
+        .input-section {
+            margin-top: auto;
+        }
+        
+        .input-section label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
             font-weight: 600;
+            color: #aaa;
         }
         
-        textarea {
+        .input-section textarea {
             width: 100%;
             padding: 12px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #333;
             border-radius: 8px;
-            font-size: 1em;
+            background: #2a2a3e;
+            color: #fff;
             font-family: inherit;
+            font-size: 0.95em;
             resize: vertical;
             min-height: 100px;
-            transition: border-color 0.3s;
+            margin-bottom: 15px;
         }
         
-        textarea:focus {
+        .input-section textarea:focus {
             outline: none;
             border-color: #667eea;
         }
         
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
             border: none;
-            padding: 15px 40px;
             border-radius: 8px;
             font-size: 1.1em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 100%;
+            transition: all 0.3s;
+            background: #555;
+            color: #999;
         }
         
-        button:hover {
+        .submit-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .submit-btn.active:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
         }
         
-        button:active {
-            transform: translateY(0);
-        }
-        
-        button:disabled {
-            opacity: 0.6;
+        .submit-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
         
-        .preview {
-            margin-top: 20px;
-            text-align: center;
-        }
-        
-        .preview img {
-            max-width: 100%;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-        
-        .result {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9ff;
-            border-radius: 10px;
-            display: none;
-        }
-        
-        .result.show {
-            display: block;
-        }
-        
-        .result h3 {
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-        
-        .result-images {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
+        .share-section {
             margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
         }
         
-        .result-image {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .result-image img {
+        .share-btn {
             width: 100%;
-            display: block;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .loading.show {
-            display: block;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
+            padding: 10px;
+            border: 2px solid #667eea;
             border-radius: 8px;
-            margin-top: 15px;
-            display: none;
+            background: transparent;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
         }
         
-        .error.show {
-            display: block;
+        .share-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Right Panel - Canvas */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: #0f0f1e;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #mainCanvas, #furnitureCanvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #333;
+        }
+        
+        #furnitureCanvas {
+            cursor: crosshair;
+            z-index: 10;
+        }
+        
+        /* Furniture Selector */
+        .furniture-selector {
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 15px;
+            height: 150px;
+        }
+        
+        .furniture-selector h3 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .furniture-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .furniture-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .furniture-scroll::-webkit-scrollbar-track {
+            background: #0f0f1e;
+            border-radius: 4px;
+        }
+        
+        .furniture-scroll::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+        
+        .furniture-item {
+            flex-shrink: 0;
+            width: 80px;
+            height: 80px;
+            cursor: grab;
+            border: 2px solid #333;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .furniture-item:hover {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+        
+        .furniture-item:active {
+            cursor: grabbing;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        
+        .loading-overlay.show {
+            display: flex;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-content img {
+            width: 200px;
+            height: 200px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .loading-content p {
+            margin-top: 20px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        /* Session Info */
+        .session-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #aaa;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🍌 Nano Banana</h1>
-        <p class="subtitle">AI 驅動的圖像編輯工具</p>
-        
-        <form id="editForm">
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📸</div>
-                <p>點擊或拖曳圖片到此處上傳</p>
-                <input type="file" id="fileInput" accept="image/*" required>
+    <!-- Starter Selection Modal -->
+    <div class="starter-modal" id="starterModal">
+        <div class="starter-content">
+            <h1>🚀 Space Interior Designer</h1>
+            <p>Choose your starting environment</p>
+            <div class="starter-grid">
+                <div class="starter-option" data-starter="space">
+                    <img src="/static/space.png" alt="Space">
+                    <div class="starter-label">SPACE</div>
+                </div>
+                <div class="starter-option" data-starter="moon">
+                    <img src="/static/moon.png" alt="Moon">
+                    <div class="starter-label">MOON</div>
+                </div>
+                <div class="starter-option" data-starter="mars">
+                    <img src="/static/mars.png" alt="Mars">
+                    <div class="starter-label">MARS</div>
+                </div>
+                <div class="starter-option" data-starter="ship">
+                    <img src="/static/ship.png" alt="Ship">
+                    <div class="starter-label">SHIP</div>
+                </div>
             </div>
-            
-            <div class="preview" id="preview"></div>
-            
-            <div class="form-group">
-                <label for="prompt">編輯指令</label>
-                <textarea id="prompt" name="prompt" placeholder="例如：將背景改成藍色、移除背景、添加陽光效果..." required></textarea>
-            </div>
-            
-            <button type="submit" id="submitBtn">開始編輯</button>
-        </form>
-        
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p style="margin-top: 15px; color: #667eea;">AI 正在處理中...</p>
-        </div>
-        
-        <div class="error" id="error"></div>
-        
-        <div class="result" id="result">
-            <h3>✨ 編輯結果</h3>
-            <div class="result-images" id="resultImages"></div>
         </div>
     </div>
-    
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="chat-header">
+                <h2>Dr. Bubu</h2>
+            </div>
+            
+            <div class="dr-bubu-container">
+                <img src="/static/dr_bubu.png" alt="Dr. Bubu" class="dr-bubu-avatar">
+                <div class="dr-bubu-message" id="drBubuMessage">
+                    Welcome! Select a starting environment to begin your space interior design journey.
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <label for="userInput">Your Design Request:</label>
+                <textarea id="userInput" placeholder="Describe what you want to add or change..."></textarea>
+                <button class="submit-btn" id="submitBtn">Submit</button>
+                
+                <div class="share-section">
+                    <button class="share-btn" id="shareBtn">📤 Share Session</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="canvas-container">
+                <div class="session-info" id="sessionInfo">Session: Loading...</div>
+                <canvas id="mainCanvas" width="800" height="600"></canvas>
+                <canvas id="furnitureCanvas" width="800" height="600"></canvas>
+            </div>
+            
+            <div class="furniture-selector">
+                <h3>🪑 Furniture & Items</h3>
+                <div class="furniture-scroll" id="furnitureScroll">
+                    <!-- Furniture items will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <img src="/static/construction.png" alt="Construction">
+            <p>Generating... Please wait</p>
+        </div>
+    </div>
+
     <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const preview = document.getElementById('preview');
-        const form = document.getElementById('editForm');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        const resultImages = document.getElementById('resultImages');
-        const errorDiv = document.getElementById('error');
+        // Global state
+        let sessionId = null;
+        let history = [];
+        let furniturePlacements = [];
+        let isDirty = false;
+        let selectedFurniture = null;
+        
+        // Canvas elements
+        const mainCanvas = document.getElementById('mainCanvas');
+        const furnitureCanvas = document.getElementById('furnitureCanvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        const furnitureCtx = furnitureCanvas.getContext('2d');
+        
+        // UI elements
+        const starterModal = document.getElementById('starterModal');
+        const drBubuMessage = document.getElementById('drBubuMessage');
+        const userInput = document.getElementById('userInput');
         const submitBtn = document.getElementById('submitBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const furnitureScroll = document.getElementById('furnitureScroll');
         
-        // 點擊上傳區域
-        uploadArea.addEventListener('click', () => fileInput.click());
-        
-        // 拖曳上傳
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                showPreview(files[0]);
-            }
-        });
-        
-        // 檔案選擇
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                showPreview(e.target.files[0]);
-            }
-        });
-        
-        // 顯示預覽
-        function showPreview(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML = `
-                    <p style="color: #667eea; font-weight: 600;">已選擇圖片：</p>
-                    <img src="${e.target.result}" alt="Preview">
-                `;
-            };
-            reader.readAsDataURL(file);
+        // Initialize
+        function init() {
+            // Generate session ID
+            sessionId = generateSessionId();
+            sessionInfo.textContent = `Session: ${sessionId}`;
+            
+            // Load furniture items
+            loadFurnitureItems();
+            
+            // Setup event listeners
+            setupEventListeners();
         }
         
-        // 表單提交
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        function generateSessionId() {
+            return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        function loadFurnitureItems() {
+            for (let i = 1; i <= 20; i++) {
+                const img = document.createElement('img');
+                img.src = `/static/item${i}.png`;
+                img.className = 'furniture-item';
+                img.dataset.itemId = `item${i}`;
+                img.draggable = true;
+                
+                img.addEventListener('dragstart', (e) => {
+                    selectedFurniture = {
+                        id: e.target.dataset.itemId,
+                        src: e.target.src
+                    };
+                });
+                
+                furnitureScroll.appendChild(img);
+            }
+        }
+        
+        function setupEventListeners() {
+            // Starter selection
+            document.querySelectorAll('.starter-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const starter = option.dataset.starter;
+                    selectStarter(starter);
+                });
+            });
             
-            const file = fileInput.files[0];
-            const prompt = document.getElementById('prompt').value;
+            // Text input change
+            userInput.addEventListener('input', () => {
+                updateSubmitButton();
+            });
             
-            if (!file || !prompt) {
-                showError('請選擇圖片並輸入編輯指令');
+            // Submit button
+            submitBtn.addEventListener('click', handleSubmit);
+            
+            // Share button
+            shareBtn.addEventListener('click', handleShare);
+            
+            // Furniture canvas drag and drop
+            furnitureCanvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            furnitureCanvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (selectedFurniture) {
+                    const rect = furnitureCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    addFurniturePlacement(selectedFurniture, x, y);
+                    selectedFurniture = null;
+                }
+            });
+        }
+        
+        function selectStarter(starter) {
+            const imgPath = `/static/${starter}.png`;
+            const img = new Image();
+            img.onload = () => {
+                mainCtx.drawImage(img, 0, 0, 800, 600);
+                history.push(imgPath);
+                starterModal.classList.add('hidden');
+                dr_talk("Great choice! Now you can add furniture by dragging items onto the canvas, or describe your vision in the text box below.");
+            };
+            img.src = imgPath;
+        }
+        
+        function addFurniturePlacement(furniture, x, y) {
+            furniturePlacements.push({
+                id: furniture.id,
+                src: furniture.src,
+                x: x,
+                y: y
+            });
+            
+            isDirty = true;
+            updateSubmitButton();
+            drawFurniturePlacements();
+        }
+        
+        function drawFurniturePlacements() {
+            furnitureCtx.clearRect(0, 0, 800, 600);
+            
+            furniturePlacements.forEach(placement => {
+                // Draw arrow and line
+                furnitureCtx.strokeStyle = '#FF0000';
+                furnitureCtx.lineWidth = 3;
+                furnitureCtx.fillStyle = '#FF0000';
+                
+                // Draw circle at placement point
+                furnitureCtx.beginPath();
+                furnitureCtx.arc(placement.x, placement.y, 8, 0, Math.PI * 2);
+                furnitureCtx.fill();
+                
+                // Draw line from center to placement
+                furnitureCtx.beginPath();
+                furnitureCtx.moveTo(400, 300);
+                furnitureCtx.lineTo(placement.x, placement.y);
+                furnitureCtx.stroke();
+                
+                // Draw arrow head
+                const angle = Math.atan2(placement.y - 300, placement.x - 400);
+                const arrowSize = 15;
+                furnitureCtx.beginPath();
+                furnitureCtx.moveTo(placement.x, placement.y);
+                furnitureCtx.lineTo(
+                    placement.x - arrowSize * Math.cos(angle - Math.PI / 6),
+                    placement.y - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                furnitureCtx.moveTo(placement.x, placement.y);
+                furnitureCtx.lineTo(
+                    placement.x - arrowSize * Math.cos(angle + Math.PI / 6),
+                    placement.y - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                furnitureCtx.stroke();
+                
+                // Draw label
+                furnitureCtx.fillStyle = '#FFFFFF';
+                furnitureCtx.font = '12px Arial';
+                furnitureCtx.fillText(placement.id, placement.x + 10, placement.y - 10);
+            });
+        }
+        
+        function updateSubmitButton() {
+            const hasText = userInput.value.trim().length > 0;
+            const hasFurniture = furniturePlacements.length > 0;
+            
+            if (hasText || hasFurniture) {
+                submitBtn.classList.add('active');
+                isDirty = true;
+            } else {
+                submitBtn.classList.remove('active');
+                isDirty = false;
+            }
+        }
+        
+        async function handleSubmit() {
+            if (!isDirty || submitBtn.disabled) return;
+            
+            const prompt = userInput.value.trim();
+            if (!prompt && furniturePlacements.length === 0) {
+                dr_talk("Please add furniture or describe what you want!");
                 return;
             }
             
-            // 顯示載入中
-            loading.classList.add('show');
-            result.classList.remove('show');
-            errorDiv.classList.remove('show');
+            // Disable submit button
             submitBtn.disabled = true;
+            submitBtn.classList.remove('active');
             
-            // 準備表單資料
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('prompt', prompt);
+            // Show loading overlay
+            loadingOverlay.classList.add('show');
             
             try {
+                // Create composite canvas
+                const compositeCanvas = document.createElement('canvas');
+                compositeCanvas.width = 800;
+                compositeCanvas.height = 600;
+                const compositeCtx = compositeCanvas.getContext('2d');
+                
+                // Draw main canvas
+                compositeCtx.drawImage(mainCanvas, 0, 0);
+                
+                // Draw furniture placements
+                compositeCtx.drawImage(furnitureCanvas, 0, 0);
+                
+                // Convert to blob
+                const blob = await new Promise(resolve => compositeCanvas.toBlob(resolve, 'image/png'));
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', blob, 'design.png');
+                
+                // Build prompt
+                let fullPrompt = prompt;
+                if (furniturePlacements.length > 0) {
+                    fullPrompt += '\n\nFurniture placements: ';
+                    furniturePlacements.forEach(p => {
+                        fullPrompt += `${p.id} at position (${Math.round(p.x)}, ${Math.round(p.y)}); `;
+                    });
+                }
+                
+                formData.append('prompt', fullPrompt);
+                
+                // Call API
                 const response = await fetch('/api/edit', {
                     method: 'POST',
                     body: formData
@@ -330,36 +675,69 @@
                 
                 const data = await response.json();
                 
-                if (data.status === 'success' && data.image_urls) {
-                    showResult(data.image_urls, data.text);
+                if (data.status === 'success' && data.image_urls && data.image_urls.length > 0) {
+                    // Load new image
+                    const newImg = new Image();
+                    newImg.onload = () => {
+                        mainCtx.clearRect(0, 0, 800, 600);
+                        mainCtx.drawImage(newImg, 0, 0, 800, 600);
+                        history.push(data.image_urls[0]);
+                        
+                        // Clear furniture placements
+                        furniturePlacements = [];
+                        furnitureCtx.clearRect(0, 0, 800, 600);
+                        
+                        // Clear input
+                        userInput.value = '';
+                        isDirty = false;
+                        
+                        // Hide loading
+                        loadingOverlay.classList.remove('show');
+                        
+                        // Dr. Bubu message
+                        dr_talk("Construction complete. Here is your new home!");
+                        
+                        // Re-enable submit
+                        submitBtn.disabled = false;
+                    };
+                    newImg.src = data.image_urls[0];
                 } else {
-                    showError(data.message || '處理失敗');
+                    throw new Error(data.message || 'Failed to generate image');
                 }
             } catch (error) {
-                showError('網路錯誤：' + error.message);
-            } finally {
-                loading.classList.remove('show');
+                console.error('Error:', error);
+                loadingOverlay.classList.remove('show');
+                dr_talk("Sorry, something went wrong. Please try again.");
                 submitBtn.disabled = false;
             }
-        });
+        }
         
-        // 顯示結果
-        function showResult(imageUrls, text) {
-            resultImages.innerHTML = '';
-            imageUrls.forEach(url => {
-                const div = document.createElement('div');
-                div.className = 'result-image';
-                div.innerHTML = `<img src="${url}" alt="Result">`;
-                resultImages.appendChild(div);
+        function handleShare() {
+            const shareUrl = `${window.location.origin}/?session=${sessionId}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                dr_talk(`Session link copied to clipboard! Share this link: ${shareUrl}`);
+            }).catch(() => {
+                dr_talk(`Share this link: ${shareUrl}`);
             });
-            result.classList.add('show');
         }
         
-        // 顯示錯誤
-        function showError(message) {
-            errorDiv.textContent = '❌ ' + message;
-            errorDiv.classList.add('show');
+        // Dr. Bubu talking animation
+        function dr_talk(text) {
+            drBubuMessage.textContent = '';
+            let index = 0;
+            
+            const interval = setInterval(() => {
+                if (index < text.length) {
+                    drBubuMessage.textContent += text[index];
+                    index++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 30);
         }
+        
+        // Initialize on load
+        init();
     </script>
 </body>
 </html>
