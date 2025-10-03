@@ -12,7 +12,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -44,11 +44,14 @@ app.add_middleware(
 BASE_DIR = Path(__file__).parent
 INPUT_DIR = BASE_DIR / "input"
 RESULT_DIR = BASE_DIR / "result"
+STATIC_DIR = BASE_DIR / "static"
 INPUT_DIR.mkdir(exist_ok=True)
 RESULT_DIR.mkdir(exist_ok=True)
+STATIC_DIR.mkdir(exist_ok=True)
 
-# 掛載靜態檔案目錄（提供生成的圖片）
+# 掛載靜態檔案目錄
 app.mount("/images", StaticFiles(directory=str(RESULT_DIR)), name="images")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 # 讀取環境變數
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -165,20 +168,12 @@ def generate_nano_banana(image_path: str, user_prompt: str, base_url: str = "htt
 
 @app.get("/")
 def root():
-    """API 根端點"""
-    return {
-        "message": "Nano Banana API",
-        "version": "1.0.0",
-        "endpoints": {
-            "POST /upload": "上傳圖片",
-            "POST /edit": "編輯圖片（上傳 + 提示）",
-            "POST /edit-from-path": "從已上傳的圖片編輯",
-            "GET /images/{filename}": "取得生成的圖片"
-        }
-    }
+    """Demo 網站首頁"""
+    from fastapi.responses import FileResponse
+    return FileResponse(str(STATIC_DIR / "index.html"))
 
 
-@app.post("/upload")
+@app.post("/api/upload")
 async def upload_image(file: UploadFile = File(...)):
     """
     上傳圖片到伺服器
@@ -208,7 +203,7 @@ async def upload_image(file: UploadFile = File(...)):
         file.file.close()
 
 
-@app.post("/edit")
+@app.post("/api/edit")
 async def edit_image(
     file: UploadFile = File(...),
     prompt: str = Form(...)
@@ -250,7 +245,7 @@ async def edit_image(
         file.file.close()
 
 
-@app.post("/edit-from-path")
+@app.post("/api/edit-from-path")
 async def edit_from_path(
     file_path: str = Form(...),
     prompt: str = Form(...)
