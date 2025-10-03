@@ -371,19 +371,19 @@
             <p>Choose your starting environment</p>
             <div class="starter-grid">
                 <div class="starter-option" data-starter="space">
-                    <img src="/static/space.png" alt="Space">
+                    <img src="/static/img/space.png" alt="Space">
                     <div class="starter-label">SPACE</div>
                 </div>
                 <div class="starter-option" data-starter="moon">
-                    <img src="/static/moon.png" alt="Moon">
+                    <img src="/static/img/moon.png" alt="Moon">
                     <div class="starter-label">MOON</div>
                 </div>
                 <div class="starter-option" data-starter="mars">
-                    <img src="/static/mars.png" alt="Mars">
+                    <img src="/static/img/mars.png" alt="Mars">
                     <div class="starter-label">MARS</div>
                 </div>
                 <div class="starter-option" data-starter="ship">
-                    <img src="/static/ship.png" alt="Ship">
+                    <img src="/static/img/ship.png" alt="Ship">
                     <div class="starter-label">SHIP</div>
                 </div>
             </div>
@@ -399,7 +399,7 @@
             </div>
             
             <div class="dr-bubu-container">
-                <img src="/static/dr_bubu.png" alt="Dr. Bubu" class="dr-bubu-avatar">
+                <img src="/static/img/dr_bubu.png" alt="Dr. Bubu" class="dr-bubu-avatar">
                 <div class="dr-bubu-message" id="drBubuMessage">
                     Welcome! Select a starting environment to begin your space interior design journey.
                 </div>
@@ -436,7 +436,7 @@
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
-            <img src="/static/construction.png" alt="Construction">
+            <img src="/static/img/construction.png" alt="Construction">
             <p>Generating... Please wait</p>
         </div>
     </div>
@@ -485,7 +485,7 @@
         function loadFurnitureItems() {
             for (let i = 1; i <= 20; i++) {
                 const img = document.createElement('img');
-                img.src = `/static/item${i}.png`;
+                img.src = `/static/img/item${i}.png`;
                 img.className = 'furniture-item';
                 img.dataset.itemId = `item${i}`;
                 img.draggable = true;
@@ -540,7 +540,7 @@
         }
         
         function selectStarter(starter) {
-            const imgPath = `/static/${starter}.png`;
+            const imgPath = `/static/img/${starter}.png`;
             const img = new Image();
             img.onload = () => {
                 mainCtx.drawImage(img, 0, 0, 800, 600);
