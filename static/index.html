@@ -102,12 +102,15 @@
         
         /* Left Panel - Chat */
         .left-panel {
-            width: 350px;
+            width: 400px;
+            min-width: 400px;
+            max-width: 400px;
             background: #1a1a2e;
             border-right: 2px solid #333;
             display: flex;
             flex-direction: column;
             padding: 20px;
+            flex-shrink: 0;
         }
         
         .chat-header {
@@ -234,6 +237,8 @@
             display: flex;
             flex-direction: column;
             padding: 20px;
+            min-width: 0;
+            overflow: hidden;
         }
         
         .canvas-container {
@@ -264,11 +269,13 @@
             border-radius: 15px;
             padding: 15px;
             height: 150px;
+            overflow: hidden;
         }
         
         .furniture-selector h3 {
             margin-bottom: 10px;
             font-size: 1.1em;
+            white-space: nowrap;
         }
         
         .furniture-scroll {
@@ -425,7 +432,7 @@
             </div>
             
             <div class="furniture-selector">
-                <h3>🪑 Furniture & Items</h3>
+                <h3>🪑 Furniture & Items - Drag & Drop</h3>
                 <div class="furniture-scroll" id="furnitureScroll">
                     <!-- Furniture items will be loaded here -->
                 </div>
