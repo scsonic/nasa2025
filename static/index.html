@@ -368,6 +368,57 @@
             font-size: 0.85em;
             color: #aaa;
         }
+        
+        /* Debug Preview */
+        .debug-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+        
+        .debug-preview.show {
+            display: flex;
+        }
+        
+        .debug-preview img {
+            max-width: 90%;
+            max-height: 80vh;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+        }
+        
+        .debug-preview .debug-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .debug-preview button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .debug-preview .close-btn {
+            background: #FF4444;
+            color: white;
+        }
+        
+        .debug-preview .continue-btn {
+            background: #667eea;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -448,7 +499,19 @@
         </div>
     </div>
 
+    <!-- Debug Preview -->
+    <div class="debug-preview" id="debugPreview">
+        <img id="debugImage" src="" alt="Debug Preview">
+        <div class="debug-controls">
+            <button class="close-btn" onclick="closeDebugPreview()">Close (Cancel)</button>
+            <button class="continue-btn" onclick="continueFromDebug()">Continue to API</button>
+        </div>
+    </div>
+
     <script>
+        // Debug flag
+        const DEBUG = true;
+        
         // Global state
         let sessionId = null;
         let history = [];
@@ -471,6 +534,12 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const sessionInfo = document.getElementById('sessionInfo');
         const furnitureScroll = document.getElementById('furnitureScroll');
+        const debugPreview = document.getElementById('debugPreview');
+        const debugImage = document.getElementById('debugImage');
+        
+        // Debug state
+        let debugBlob = null;
+        let debugPrompt = null;
         
         // Initialize
         function init() {
@@ -559,6 +628,12 @@
         }
         
         function addFurniturePlacement(furniture, x, y) {
+            // 最多只能放 6 個 furniture
+            if (furniturePlacements.length >= 6) {
+                dr_talk("Maximum 6 furniture items allowed at once!");
+                return;
+            }
+            
             furniturePlacements.push({
                 id: furniture.id,
                 src: furniture.src,
@@ -575,41 +650,21 @@
             furnitureCtx.clearRect(0, 0, 800, 600);
             
             furniturePlacements.forEach(placement => {
-                // Draw arrow and line
+                // Draw circle at placement point
                 furnitureCtx.strokeStyle = '#FF0000';
                 furnitureCtx.lineWidth = 3;
                 furnitureCtx.fillStyle = '#FF0000';
                 
-                // Draw circle at placement point
                 furnitureCtx.beginPath();
                 furnitureCtx.arc(placement.x, placement.y, 8, 0, Math.PI * 2);
                 furnitureCtx.fill();
                 
-                // Draw line from center to placement
-                furnitureCtx.beginPath();
-                furnitureCtx.moveTo(400, 300);
-                furnitureCtx.lineTo(placement.x, placement.y);
-                furnitureCtx.stroke();
-                
-                // Draw arrow head
-                const angle = Math.atan2(placement.y - 300, placement.x - 400);
-                const arrowSize = 15;
-                furnitureCtx.beginPath();
-                furnitureCtx.moveTo(placement.x, placement.y);
-                furnitureCtx.lineTo(
-                    placement.x - arrowSize * Math.cos(angle - Math.PI / 6),
-                    placement.y - arrowSize * Math.sin(angle - Math.PI / 6)
-                );
-                furnitureCtx.moveTo(placement.x, placement.y);
-                furnitureCtx.lineTo(
-                    placement.x - arrowSize * Math.cos(angle + Math.PI / 6),
-                    placement.y - arrowSize * Math.sin(angle + Math.PI / 6)
-                );
-                furnitureCtx.stroke();
-                
                 // Draw label
                 furnitureCtx.fillStyle = '#FFFFFF';
-                furnitureCtx.font = '12px Arial';
+                furnitureCtx.font = '14px Arial';
+                furnitureCtx.strokeStyle = '#000000';
+                furnitureCtx.lineWidth = 3;
+                furnitureCtx.strokeText(placement.id, placement.x + 10, placement.y - 10);
                 furnitureCtx.fillText(placement.id, placement.x + 10, placement.y - 10);
             });
         }
@@ -644,34 +699,199 @@
             loadingOverlay.classList.add('show');
             
             try {
+                const furnitureCount = furniturePlacements.length;
+                let canvasWidth = 800;
+                let canvasHeight = 600;
+                let furnitureOnLeft = false;
+                let furnitureOnRight = false;
+                
+                // 決定 canvas 尺寸和 furniture 位置
+                if (furnitureCount >= 1 && furnitureCount <= 3) {
+                    canvasWidth = 1000; // 800 + 200
+                    furnitureOnLeft = true;
+                } else if (furnitureCount >= 4 && furnitureCount <= 6) {
+                    canvasWidth = 1200; // 800 + 200 + 200
+                    furnitureOnLeft = true;
+                    furnitureOnRight = true;
+                }
+                
                 // Create composite canvas
                 const compositeCanvas = document.createElement('canvas');
-                compositeCanvas.width = 800;
-                compositeCanvas.height = 600;
+                compositeCanvas.width = canvasWidth;
+                compositeCanvas.height = canvasHeight;
                 const compositeCtx = compositeCanvas.getContext('2d');
                 
-                // Draw main canvas
-                compositeCtx.drawImage(mainCanvas, 0, 0);
+                // 填充白色背景
+                compositeCtx.fillStyle = '#FFFFFF';
+                compositeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
                 
-                // Draw furniture placements
-                compositeCtx.drawImage(furnitureCanvas, 0, 0);
+                // 計算底圖位置（原圖 800x600）
+                let baseImageX = 0;
+                if (furnitureOnLeft) {
+                    baseImageX = 200; // 左邊有 furniture，底圖往右移
+                }
+                
+                // 載入並繪製底圖（history 最後一張）
+                if (history.length > 0) {
+                    const baseImg = new Image();
+                    await new Promise((resolve, reject) => {
+                        baseImg.onload = resolve;
+                        baseImg.onerror = reject;
+                        baseImg.src = history[history.length - 1];
+                    });
+                    compositeCtx.drawImage(baseImg, baseImageX, 0, 800, 600);
+                }
+                
+                // 繪製 furniture items
+                if (furnitureCount > 0) {
+                    // 載入所有 furniture 圖片
+                    const furnitureImages = await Promise.all(
+                        furniturePlacements.map(placement => {
+                            return new Promise((resolve, reject) => {
+                                const img = new Image();
+                                img.onload = () => resolve({ img, placement });
+                                img.onerror = reject;
+                                img.src = placement.src;
+                            });
+                        })
+                    );
+                    
+                    // 繪製左側 furniture (1-3)
+                    if (furnitureOnLeft) {
+                        const leftItems = furnitureImages.slice(0, 3);
+                        leftItems.forEach((item, index) => {
+                            const y = index * 200;
+                            // 繪製 furniture 圖片 (200x200)
+                            compositeCtx.drawImage(item.img, 0, y, 200, 200);
+                            
+                            // 繪製箭頭：從 furniture 中心到目標坐標
+                            const furnitureCenterX = 100;
+                            const furnitureCenterY = y + 100;
+                            const targetX = baseImageX + item.placement.x;
+                            const targetY = item.placement.y;
+                            
+                            // 畫線
+                            compositeCtx.strokeStyle = '#FF0000';
+                            compositeCtx.lineWidth = 3;
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
+                            compositeCtx.lineTo(targetX, targetY);
+                            compositeCtx.stroke();
+                            
+                            // 畫箭頭
+                            const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
+                            const arrowSize = 15;
+                            compositeCtx.fillStyle = '#FF0000';
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(targetX, targetY);
+                            compositeCtx.lineTo(
+                                targetX - arrowSize * Math.cos(angle - Math.PI / 6),
+                                targetY - arrowSize * Math.sin(angle - Math.PI / 6)
+                            );
+                            compositeCtx.lineTo(
+                                targetX - arrowSize * Math.cos(angle + Math.PI / 6),
+                                targetY - arrowSize * Math.sin(angle + Math.PI / 6)
+                            );
+                            compositeCtx.closePath();
+                            compositeCtx.fill();
+                        });
+                    }
+                    
+                    // 繪製右側 furniture (4-6)
+                    if (furnitureOnRight) {
+                        const rightItems = furnitureImages.slice(3, 6);
+                        rightItems.forEach((item, index) => {
+                            const x = 1000; // 800 + 200
+                            const y = index * 200;
+                            // 繪製 furniture 圖片 (200x200)
+                            compositeCtx.drawImage(item.img, x, y, 200, 200);
+                            
+                            // 繪製箭頭：從 furniture 中心到目標坐標
+                            const furnitureCenterX = x + 100;
+                            const furnitureCenterY = y + 100;
+                            const targetX = baseImageX + item.placement.x;
+                            const targetY = item.placement.y;
+                            
+                            // 畫線
+                            compositeCtx.strokeStyle = '#FF0000';
+                            compositeCtx.lineWidth = 3;
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
+                            compositeCtx.lineTo(targetX, targetY);
+                            compositeCtx.stroke();
+                            
+                            // 畫箭頭
+                            const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
+                            const arrowSize = 15;
+                            compositeCtx.fillStyle = '#FF0000';
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(targetX, targetY);
+                            compositeCtx.lineTo(
+                                targetX - arrowSize * Math.cos(angle - Math.PI / 6),
+                                targetY - arrowSize * Math.sin(angle - Math.PI / 6)
+                            );
+                            compositeCtx.lineTo(
+                                targetX - arrowSize * Math.cos(angle + Math.PI / 6),
+                                targetY - arrowSize * Math.sin(angle + Math.PI / 6)
+                            );
+                            compositeCtx.closePath();
+                            compositeCtx.fill();
+                        });
+                    }
+                }
                 
                 // Convert to blob
                 const blob = await new Promise(resolve => compositeCanvas.toBlob(resolve, 'image/png'));
                 
+                // Build prompt
+                let fullPrompt = prompt;
+                
+                if (furniturePlacements.length > 0) {
+                    fullPrompt += 'please move there objects into the image in the center, fellow the red lines. '
+                    fullPrompt += 'after move objects to the place, you can delete the white area, keep only center image. you can made it natural by change the object\' light or direction' ;
+                    fullPrompt += '\n\nFurniture placements: ';
+                    // furniturePlacements.forEach(p => {
+                    //     fullPrompt += `${p.id} at position (${Math.round(p.x)}, ${Math.round(p.y)}); `;
+                    // });
+                }
+                
+                // Debug mode: show preview
+                if (DEBUG) {
+                    console.log('=== DEBUG MODE ===');
+                    console.log('Prompt:', fullPrompt);
+                    console.log('Canvas size:', canvasWidth, 'x', canvasHeight);
+                    console.log('Furniture count:', furnitureCount);
+                    console.log('==================');
+                    
+                    // Store for later use
+                    debugBlob = blob;
+                    debugPrompt = fullPrompt;
+                    
+                    // Show preview
+                    const imageUrl = URL.createObjectURL(blob);
+                    debugImage.src = imageUrl;
+                    debugPreview.classList.add('show');
+                    loadingOverlay.classList.remove('show');
+                    
+                    return; // Stop here in debug mode
+                }
+                
+                // Normal mode: call API directly
+                await callAPI(blob, fullPrompt);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                loadingOverlay.classList.remove('show');
+                dr_talk("Sorry, something went wrong. Please try again.");
+                submitBtn.disabled = false;
+            }
+        }
+        
+        async function callAPI(blob, fullPrompt) {
+            try {
                 // Create form data
                 const formData = new FormData();
                 formData.append('file', blob, 'design.png');
-                
-                // Build prompt
-                let fullPrompt = prompt;
-                if (furniturePlacements.length > 0) {
-                    fullPrompt += '\n\nFurniture placements: ';
-                    furniturePlacements.forEach(p => {
-                        fullPrompt += `${p.id} at position (${Math.round(p.x)}, ${Math.round(p.y)}); `;
-                    });
-                }
-                
                 formData.append('prompt', fullPrompt);
                 
                 // Call API
@@ -717,6 +937,32 @@
                 dr_talk("Sorry, something went wrong. Please try again.");
                 submitBtn.disabled = false;
             }
+        }
+        
+        // Debug control functions
+        function closeDebugPreview() {
+            debugPreview.classList.remove('show');
+            debugBlob = null;
+            debugPrompt = null;
+            submitBtn.disabled = false;
+        }
+        
+        async function continueFromDebug() {
+            if (!debugBlob || !debugPrompt) {
+                closeDebugPreview();
+                return;
+            }
+            
+            // Hide debug preview and show loading
+            debugPreview.classList.remove('show');
+            loadingOverlay.classList.add('show');
+            
+            // Call API with stored data
+            await callAPI(debugBlob, debugPrompt);
+            
+            // Clear debug data
+            debugBlob = null;
+            debugPrompt = null;
         }
         
         function handleShare() {
