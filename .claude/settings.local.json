@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(cat:*)",
+      "Bash(gcloud config get-value:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(adk web:*)",
+      "Bash(curl http://127.0.0.1:8000/)",
+      "Bash(kill:*)",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
