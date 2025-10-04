@@ -708,6 +708,15 @@
         let debugBlob = null;
         let debugPrompt = null;
         
+        // Furniture placement visualization settings
+        const FURNITURE_DISPLAY = {
+            itemSize: 100,           // 圖片大小
+            text: 'move this object here',  // 顯示文字
+            arrowLength: 40,         // 箭頭長度
+            fontSize: 14,            // 文字大小
+            spacing: 5               // 元素之間的間距
+        };
+        
         // Initialize
         async function init() {
             // Generate session ID and secret from server
@@ -835,22 +844,113 @@
             furnitureCtx.clearRect(0, 0, 1184, 864);
             
             furniturePlacements.forEach(placement => {
-                // Draw circle at placement point
-                furnitureCtx.strokeStyle = '#FF0000';
-                furnitureCtx.lineWidth = 3;
+                const itemSize = FURNITURE_DISPLAY.itemSize;
+                const text = FURNITURE_DISPLAY.text;
+                const arrowLength = FURNITURE_DISPLAY.arrowLength;
+                const fontSize = FURNITURE_DISPLAY.fontSize;
+                const spacing = FURNITURE_DISPLAY.spacing;
+                
+                // 判斷是否在上方 1/4
+                const isTopQuarter = placement.y < (864 / 4);
+                
+                // 載入並繪製 item 圖片
+                const img = new Image();
+                img.src = placement.src;
+                
+                if (isTopQuarter) {
+                    // 上方 1/4: 箭頭 -> 圖片 -> 文字 (由上往下)
+                    let currentY = placement.y - arrowLength - spacing;
+                    
+                    // 1. 繪製箭頭 (指向 placement.y)
+                    furnitureCtx.fillStyle = '#FF0000';
+                    furnitureCtx.strokeStyle = '#FF0000';
+                    furnitureCtx.lineWidth = 2;
+                    
+                    // 箭頭線
+                    furnitureCtx.beginPath();
+                    furnitureCtx.moveTo(placement.x, currentY);
+                    furnitureCtx.lineTo(placement.x, placement.y);
+                    furnitureCtx.stroke();
+                    
+                    // 箭頭頭部
+                    furnitureCtx.beginPath();
+                    furnitureCtx.moveTo(placement.x, placement.y);
+                    furnitureCtx.lineTo(placement.x - 8, placement.y - 12);
+                    furnitureCtx.lineTo(placement.x + 8, placement.y - 12);
+                    furnitureCtx.closePath();
+                    furnitureCtx.fill();
+                    
+                    // 2. 繪製圖片 (在箭頭上方)
+                    currentY = currentY - itemSize - spacing;
+                    if (img.complete) {
+                        furnitureCtx.drawImage(img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                    } else {
+                        img.onload = () => {
+                            furnitureCtx.drawImage(img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                        };
+                    }
+                    
+                    // 3. 繪製文字 (在圖片上方)
+                    furnitureCtx.font = `${fontSize}px Arial`;
+                    furnitureCtx.fillStyle = '#FFFFFF';
+                    furnitureCtx.strokeStyle = '#000000';
+                    furnitureCtx.lineWidth = 3;
+                    const textWidth = furnitureCtx.measureText(text).width;
+                    const textX = placement.x - textWidth / 2;
+                    const textY = currentY - spacing;
+                    furnitureCtx.strokeText(text, textX, textY);
+                    furnitureCtx.fillText(text, textX, textY);
+                    
+                } else {
+                    // 其他位置: 圖片 -> 文字 -> 箭頭 (由上往下)
+                    let currentY = placement.y - itemSize - spacing * 2 - fontSize - arrowLength;
+                    
+                    // 1. 繪製圖片
+                    if (img.complete) {
+                        furnitureCtx.drawImage(img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                    } else {
+                        img.onload = () => {
+                            furnitureCtx.drawImage(img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                        };
+                    }
+                    
+                    // 2. 繪製文字 (在圖片下方)
+                    currentY += itemSize + spacing + fontSize;
+                    furnitureCtx.font = `${fontSize}px Arial`;
+                    furnitureCtx.fillStyle = '#FFFFFF';
+                    furnitureCtx.strokeStyle = '#000000';
+                    furnitureCtx.lineWidth = 3;
+                    const textWidth = furnitureCtx.measureText(text).width;
+                    const textX = placement.x - textWidth / 2;
+                    furnitureCtx.strokeText(text, textX, currentY);
+                    furnitureCtx.fillText(text, textX, currentY);
+                    
+                    // 3. 繪製箭頭 (在文字下方，指向 placement.y)
+                    currentY += spacing;
+                    furnitureCtx.fillStyle = '#FF0000';
+                    furnitureCtx.strokeStyle = '#FF0000';
+                    furnitureCtx.lineWidth = 2;
+                    
+                    // 箭頭線
+                    furnitureCtx.beginPath();
+                    furnitureCtx.moveTo(placement.x, currentY);
+                    furnitureCtx.lineTo(placement.x, placement.y);
+                    furnitureCtx.stroke();
+                    
+                    // 箭頭頭部
+                    furnitureCtx.beginPath();
+                    furnitureCtx.moveTo(placement.x, placement.y);
+                    furnitureCtx.lineTo(placement.x - 8, placement.y - 12);
+                    furnitureCtx.lineTo(placement.x + 8, placement.y - 12);
+                    furnitureCtx.closePath();
+                    furnitureCtx.fill();
+                }
+                
+                // 繪製目標點
                 furnitureCtx.fillStyle = '#FF0000';
-                
                 furnitureCtx.beginPath();
-                furnitureCtx.arc(placement.x, placement.y, 8, 0, Math.PI * 2);
+                furnitureCtx.arc(placement.x, placement.y, 5, 0, Math.PI * 2);
                 furnitureCtx.fill();
-                
-                // Draw label
-                furnitureCtx.fillStyle = '#FFFFFF';
-                furnitureCtx.font = '14px Arial';
-                furnitureCtx.strokeStyle = '#000000';
-                furnitureCtx.lineWidth = 3;
-                furnitureCtx.strokeText(placement.id, placement.x + 10, placement.y - 10);
-                furnitureCtx.fillText(placement.id, placement.x + 10, placement.y - 10);
             });
         }
         
@@ -908,7 +1008,7 @@
                     compositeCtx.drawImage(baseImg, 0, 0, 1184, 864);
                 }
                 
-                // 繪製 furniture items
+                // 繪製 furniture items (與 drawFurniturePlacements 相同的邏輯)
                 if (furnitureCount > 0) {
                     // 載入所有 furniture 圖片
                     const furnitureImages = await Promise.all(
@@ -922,71 +1022,101 @@
                         })
                     );
                     
-                    // 在四個角落繪製家具和箭頭 (最多 4 個)
-                    // 角落位置：左上、右上、左下、右下
-                    const corners = [
-                        { x: 20, y: 20 },           // 左上
-                        { x: 1184 - 120, y: 20 },   // 右上
-                        { x: 20, y: 864 - 120 },    // 左下
-                        { x: 1184 - 120, y: 864 - 120 } // 右下
-                    ];
-                    
+                    // 繪製每個 furniture placement
                     for (let i = 0; i < furnitureCount; i++) {
                         const item = furnitureImages[i];
                         const placement = item.placement;
-                        const corner = corners[i];
                         
-                        // 家具圖示大小
-                        const furnitureSize = 100;
-                        const furnitureX = corner.x;
-                        const furnitureY = corner.y;
+                        const itemSize = FURNITURE_DISPLAY.itemSize;
+                        const text = FURNITURE_DISPLAY.text;
+                        const arrowLength = FURNITURE_DISPLAY.arrowLength;
+                        const fontSize = FURNITURE_DISPLAY.fontSize;
+                        const spacing = FURNITURE_DISPLAY.spacing;
                         
-                        // 繪製白色底
-                        compositeCtx.fillStyle = '#FFFFFF';
-                        compositeCtx.fillRect(furnitureX, furnitureY, furnitureSize, furnitureSize);
+                        // 判斷是否在上方 1/4
+                        const isTopQuarter = placement.y < (864 / 4);
                         
-                        // 繪製黑色框
-                        compositeCtx.strokeStyle = '#000000';
-                        compositeCtx.lineWidth = 3;
-                        compositeCtx.strokeRect(furnitureX, furnitureY, furnitureSize, furnitureSize);
+                        if (isTopQuarter) {
+                            // 上方 1/4: 箭頭 -> 圖片 -> 文字 (由上往下)
+                            let currentY = placement.y - arrowLength - spacing;
+                            
+                            // 1. 繪製箭頭 (指向 placement.y)
+                            compositeCtx.fillStyle = '#FF0000';
+                            compositeCtx.strokeStyle = '#FF0000';
+                            compositeCtx.lineWidth = 2;
+                            
+                            // 箭頭線
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(placement.x, currentY);
+                            compositeCtx.lineTo(placement.x, placement.y);
+                            compositeCtx.stroke();
+                            
+                            // 箭頭頭部
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(placement.x, placement.y);
+                            compositeCtx.lineTo(placement.x - 8, placement.y - 12);
+                            compositeCtx.lineTo(placement.x + 8, placement.y - 12);
+                            compositeCtx.closePath();
+                            compositeCtx.fill();
+                            
+                            // 2. 繪製圖片 (在箭頭上方)
+                            currentY = currentY - itemSize - spacing;
+                            compositeCtx.drawImage(item.img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                            
+                            // 3. 繪製文字 (在圖片上方)
+                            compositeCtx.font = `${fontSize}px Arial`;
+                            compositeCtx.fillStyle = '#FFFFFF';
+                            compositeCtx.strokeStyle = '#000000';
+                            compositeCtx.lineWidth = 3;
+                            const textWidth = compositeCtx.measureText(text).width;
+                            const textX = placement.x - textWidth / 2;
+                            const textY = currentY - spacing;
+                            compositeCtx.strokeText(text, textX, textY);
+                            compositeCtx.fillText(text, textX, textY);
+                            
+                        } else {
+                            // 其他位置: 圖片 -> 文字 -> 箭頭 (由上往下)
+                            let currentY = placement.y - itemSize - spacing * 2 - fontSize - arrowLength;
+                            
+                            // 1. 繪製圖片
+                            compositeCtx.drawImage(item.img, placement.x - itemSize/2, currentY, itemSize, itemSize);
+                            
+                            // 2. 繪製文字 (在圖片下方)
+                            currentY += itemSize + spacing + fontSize;
+                            compositeCtx.font = `${fontSize}px Arial`;
+                            compositeCtx.fillStyle = '#FFFFFF';
+                            compositeCtx.strokeStyle = '#000000';
+                            compositeCtx.lineWidth = 3;
+                            const textWidth = compositeCtx.measureText(text).width;
+                            const textX = placement.x - textWidth / 2;
+                            compositeCtx.strokeText(text, textX, currentY);
+                            compositeCtx.fillText(text, textX, currentY);
+                            
+                            // 3. 繪製箭頭 (在文字下方，指向 placement.y)
+                            currentY += spacing;
+                            compositeCtx.fillStyle = '#FF0000';
+                            compositeCtx.strokeStyle = '#FF0000';
+                            compositeCtx.lineWidth = 2;
+                            
+                            // 箭頭線
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(placement.x, currentY);
+                            compositeCtx.lineTo(placement.x, placement.y);
+                            compositeCtx.stroke();
+                            
+                            // 箭頭頭部
+                            compositeCtx.beginPath();
+                            compositeCtx.moveTo(placement.x, placement.y);
+                            compositeCtx.lineTo(placement.x - 8, placement.y - 12);
+                            compositeCtx.lineTo(placement.x + 8, placement.y - 12);
+                            compositeCtx.closePath();
+                            compositeCtx.fill();
+                        }
                         
-                        // 繪製 furniture 圖片在角落（稍微縮小一點，留出邊距）
-                        const padding = 5;
-                        compositeCtx.drawImage(item.img, 
-                            furnitureX + padding, 
-                            furnitureY + padding, 
-                            furnitureSize - padding * 2, 
-                            furnitureSize - padding * 2);
-                        
-                        // 繪製箭頭：從 furniture 中心到目標坐標
-                        const furnitureCenterX = furnitureX + furnitureSize / 2;
-                        const furnitureCenterY = furnitureY + furnitureSize / 2;
-                        const targetX = placement.x;
-                        const targetY = placement.y;
-                        
-                        // 畫線
-                        compositeCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-                        compositeCtx.lineWidth = 10;
+                        // 繪製目標點
+                        compositeCtx.fillStyle = '#FF0000';
                         compositeCtx.beginPath();
-                        compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
-                        compositeCtx.lineTo(targetX, targetY);
-                        compositeCtx.stroke();
-                        
-                        // 畫箭頭
-                        const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
-                        const arrowSize = 40;
-                        compositeCtx.fillStyle = 'rgba(239, 68, 68, 0.8)';
-                        compositeCtx.beginPath();
-                        compositeCtx.moveTo(targetX, targetY);
-                        compositeCtx.lineTo(
-                            targetX - arrowSize * Math.cos(angle - Math.PI / 6),
-                            targetY - arrowSize * Math.sin(angle - Math.PI / 6)
-                        );
-                        compositeCtx.lineTo(
-                            targetX - arrowSize * Math.cos(angle + Math.PI / 6),
-                            targetY - arrowSize * Math.sin(angle + Math.PI / 6)
-                        );
-                        compositeCtx.closePath();
+                        compositeCtx.arc(placement.x, placement.y, 5, 0, Math.PI * 2);
                         compositeCtx.fill();
                     }
                 }
