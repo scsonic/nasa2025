@@ -206,10 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-*.jpg
-*.png
-
-# Project specific
+# Project specific - ignore these folders and their contents
 input/
 result/
 sessions/

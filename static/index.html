@@ -513,11 +513,13 @@
         const DEBUG = true;
         
         // Global state
-        let sessionId = null;
+        let sessionId = '';
+        let sessionSecret = '';
         let history = [];
         let furniturePlacements = [];
         let isDirty = false;
         let selectedFurniture = null;
+        let currentStarterImage = null;
         
         // Canvas elements
         const mainCanvas = document.getElementById('mainCanvas');
@@ -534,18 +536,15 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const sessionInfo = document.getElementById('sessionInfo');
         const furnitureScroll = document.getElementById('furnitureScroll');
-        const debugPreview = document.getElementById('debugPreview');
-        const debugImage = document.getElementById('debugImage');
         
         // Debug state
         let debugBlob = null;
         let debugPrompt = null;
         
         // Initialize
-        function init() {
-            // Generate session ID
-            sessionId = generateSessionId();
-            sessionInfo.textContent = `Session: ${sessionId}`;
+        async function init() {
+            // Generate session ID and secret from server
+            await generateSession();
             
             // Load furniture items
             loadFurnitureItems();
@@ -554,8 +553,27 @@
             setupEventListeners();
         }
         
-        function generateSessionId() {
-            return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        async function generateSession() {
+            try {
+                const response = await fetch('/api/session/generate', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    sessionId = data.session_id;
+                    sessionSecret = data.secret;
+                    sessionInfo.textContent = `Session: ${sessionId}`;
+                    console.log('✅ Session generated:', sessionId);
+                    console.log('🔒 Secret stored (not displayed)');
+                } else {
+                    throw new Error('Failed to generate session');
+                }
+            } catch (error) {
+                console.error('Error generating session:', error);
+                dr_talk('Failed to generate session. Please refresh the page.');
+            }
         }
         
         function loadFurnitureItems() {
@@ -867,6 +885,7 @@
                 formData.append('file', blob, 'design.png');
                 formData.append('prompt', fullPrompt);
                 formData.append('session_id', sessionId);
+                formData.append('secret', sessionSecret);
                 
                 // Call API
                 const response = await fetch('/api/edit', {

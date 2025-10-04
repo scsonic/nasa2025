@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shared Design - Nano Banana</title>
+    <title>Your Home in Space: The Habitat Layout Creator</title>
     <style>
         * {
             margin: 0;
@@ -44,6 +44,44 @@
         .header p {
             color: #aaa;
             font-size: 1.1em;
+        }
+        
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .footer .main-link {
+            color: #667eea;
+            font-size: 1.2em;
+            text-decoration: none;
+            margin-bottom: 8px;
+            display: block;
+            transition: color 0.3s;
+        }
+        
+        .footer .main-link:hover {
+            color: #764ba2;
+        }
+        
+        .footer .credit {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
+        .footer .credit a {
+            color: #999;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer .credit a:hover {
+            color: #aaa;
         }
         
         .slideshow-container {
@@ -217,7 +255,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🍌 Nano Banana Design Gallery</h1>
+        <h1>🚀 Your Home in Space: The Habitat Layout Creator</h1>
         <p id="sessionInfo">Loading session...</p>
     </div>
     
@@ -245,6 +283,13 @@
         <div class="play-button" id="playButton" style="display: none;">
             <div class="play-icon"></div>
             <div class="pause-icon"></div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <a href="https://nasa2025.scsonic.com" class="main-link" target="_blank">Create your own layout? Visit nasa2025.scsonic.com</a>
+        <div class="credit">
+            Created by Team BuBu | <a href="https://www.spaceappschallenge.org/2025/find-a-team/bubu/?tab=details" target="_blank">NASA Space Apps Challenge 2025</a>
         </div>
     </div>
     
@@ -306,6 +351,11 @@
                     // Update counter
                     totalSlides.textContent = images.length;
                     updateCounter();
+                    
+                    // Auto-start slideshow
+                    setTimeout(() => {
+                        startPlay();
+                    }, 500);
                     
                 } else {
                     showError('Session not found or no images');
@@ -372,14 +422,31 @@
                 showSlide(0);
             }
             
-            playInterval = setInterval(() => {
+            playNext();
+        }
+        
+        function playNext() {
+            if (!isPlaying) return;
+            
+            // Determine delay: 3000ms for last image, 500ms for others
+            const isLastImage = currentIndex === images.length - 1;
+            const delay = isLastImage ? 3000 : 500;
+            
+            playInterval = setTimeout(() => {
                 nextSlide();
                 
-                // Stop at the end
+                // If we just showed the last image, restart from beginning
                 if (currentIndex === images.length - 1) {
-                    stopPlay();
+                    // Wait 3 seconds on last image, then restart
+                    playInterval = setTimeout(() => {
+                        showSlide(0);
+                        playNext();
+                    }, 3000);
+                } else {
+                    // Continue to next image
+                    playNext();
                 }
-            }, 500); // 500ms per image
+            }, delay);
         }
         
         function stopPlay() {
@@ -387,7 +454,7 @@
             playButton.classList.remove('playing');
             
             if (playInterval) {
-                clearInterval(playInterval);
+                clearTimeout(playInterval);
                 playInterval = null;
             }
         }

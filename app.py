@@ -8,6 +8,9 @@ import uuid
 import base64
 import shutil
 import json
+import hashlib
+import secrets
+import string
 from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime
@@ -88,6 +91,36 @@ class ImageEditRequest(BaseModel):
     """圖像編輯請求"""
     prompt: str
     image_url: Optional[str] = None
+
+
+# Secret key for session validation (keep this secret!)
+SECRET_SALT = os.getenv("SESSION_SECRET_SALT", "nano-banana-secret-2025")
+
+
+def generate_session_id() -> str:
+    """
+    生成 5 位大小寫英數混合的 session ID
+    """
+    chars = string.ascii_letters + string.digits  # a-z, A-Z, 0-9
+    return ''.join(secrets.choice(chars) for _ in range(5))
+
+
+def generate_secret(session_id: str) -> str:
+    """
+    從 session_id 生成 secret
+    使用 HMAC-SHA256 並取前 10 個字元
+    """
+    message = f"{session_id}{SECRET_SALT}".encode('utf-8')
+    hash_obj = hashlib.sha256(message)
+    return hash_obj.hexdigest()[:10]
+
+
+def verify_session(session_id: str, secret: str) -> bool:
+    """
+    驗證 session_id 和 secret 是否匹配
+    """
+    expected_secret = generate_secret(session_id)
+    return secrets.compare_digest(secret, expected_secret)
 
 
 def upload_to_gcs(file_data: bytes, filename: str, folder: str = "result") -> str:
@@ -343,6 +376,24 @@ def root():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
+@app.post("/api/session/generate")
+async def generate_session():
+    """
+    生成新的 session ID 和 secret
+    
+    Returns:
+        dict: 包含 session_id 和 secret
+    """
+    session_id = generate_session_id()
+    secret = generate_secret(session_id)
+    
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "secret": secret
+    }
+
+
 @app.post("/api/upload")
 async def upload_image(file: UploadFile = File(...)):
     """
@@ -377,7 +428,8 @@ async def upload_image(file: UploadFile = File(...)):
 async def edit_image(
     file: UploadFile = File(...),
     prompt: str = Form(...),
-    session_id: str = Form(None)
+    session_id: str = Form(...),
+    secret: str = Form(...)
 ):
     """
     上傳圖片並直接編輯
@@ -385,11 +437,18 @@ async def edit_image(
     Args:
         file: 要編輯的圖片檔案
         prompt: 編輯指令
+        session_id: Session ID (必須)
+        secret: Session secret (必須)
 
     Returns:
         dict: 包含編輯結果的字典
     """
     try:
+        # 驗證 session
+        if not verify_session(session_id, secret):
+            raise HTTPException(status_code=403, detail="Invalid session or secret")
+        
+        print(f"✅ Session verified: {session_id}")
         # 先上傳圖片
         file_extension = os.path.splitext(file.filename)[1] or ".jpg"
         unique_filename = f"{uuid.uuid4()}{file_extension}"
