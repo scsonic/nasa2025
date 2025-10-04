@@ -3,3 +3,5 @@ uvicorn>=0.34.0
 python-multipart>=0.0.20
 python-dotenv>=1.0.0
 google-genai>=1.40.0
+google-cloud-storage>=2.10.0
+gunicorn>=21.2.0

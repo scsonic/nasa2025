@@ -14,7 +14,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 
 from google import genai
 from google.genai import types
+from google.cloud import storage
 
 # 載入環境變數
 load_dotenv()
@@ -65,6 +66,23 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("請設定 GOOGLE_API_KEY 環境變數")
 
+# GCP Storage 設定
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "team-bubu")
+USE_GCS = os.getenv("USE_GCS", "false").lower() == "true"  # 預設為 false (本地儲存)
+
+# 初始化 GCS client
+storage_client = None
+if USE_GCS:
+    try:
+        storage_client = storage.Client()
+        print(f"✅ GCS enabled: using bucket {GCS_BUCKET_NAME}")
+    except Exception as e:
+        print(f"⚠️  GCS initialization failed: {e}")
+        print("Falling back to local storage")
+        USE_GCS = False
+else:
+    print("📁 Using local storage")
+
 
 class ImageEditRequest(BaseModel):
     """圖像編輯請求"""
@@ -72,7 +90,143 @@ class ImageEditRequest(BaseModel):
     image_url: Optional[str] = None
 
 
-def generate_nano_banana(image_path: str, user_prompt: str, base_url: str = "http://localhost:8000") -> dict:
+def upload_to_gcs(file_data: bytes, filename: str, folder: str = "result") -> str:
+    """
+    上傳檔案到 GCS bucket
+    
+    Args:
+        file_data: 檔案二進位資料
+        filename: 檔案名稱
+        folder: 資料夾名稱 (input/result/json)
+    
+    Returns:
+        str: 公開 URL
+    """
+    if not USE_GCS or not storage_client:
+        raise Exception("GCS not enabled")
+    
+    bucket = storage_client.bucket(GCS_BUCKET_NAME)
+    blob = bucket.blob(f"{folder}/{filename}")
+    
+    # 設定 content type
+    content_type = "image/jpeg"
+    if filename.endswith(".png"):
+        content_type = "image/png"
+    elif filename.endswith(".json"):
+        content_type = "application/json"
+    
+    blob.upload_from_string(file_data, content_type=content_type)
+    
+    # 返回公開 URL
+    return f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{folder}/{filename}"
+
+
+def save_file(file_data: bytes, filename: str, folder: str = "result") -> str:
+    """
+    儲存檔案（GCS 或本地）
+    
+    Returns:
+        str: 檔案的公開 URL
+    """
+    if USE_GCS:
+        # 上傳到 GCS
+        return upload_to_gcs(file_data, filename, folder)
+    else:
+        # 儲存到本地
+        if folder == "result":
+            folder_path = RESULT_DIR
+        elif folder == "input":
+            folder_path = INPUT_DIR
+        elif folder == "json":
+            folder_path = SESSIONS_DIR
+        else:
+            folder_path = BASE_DIR / folder
+        
+        file_path = folder_path / filename
+        with open(file_path, "wb") as f:
+            f.write(file_data)
+        
+        base_url = os.getenv("BASE_URL", "http://localhost:8000")
+        return f"{base_url}/images/{filename}"
+
+
+def load_session_json(session_id: str) -> Optional[dict]:
+    """
+    載入 session JSON (從 GCS 或本地)
+    """
+    filename = f"{session_id}.json"
+    
+    if USE_GCS and storage_client:
+        try:
+            bucket = storage_client.bucket(GCS_BUCKET_NAME)
+            blob = bucket.blob(f"json/{filename}")
+            if blob.exists():
+                data = blob.download_as_string()
+                return json.loads(data)
+        except Exception as e:
+            print(f"Error loading from GCS: {e}")
+    
+    # Fallback to local
+    session_file = SESSIONS_DIR / filename
+    if session_file.exists():
+        with open(session_file, "r") as f:
+            return json.load(f)
+    
+    return None
+
+
+def save_session_json(session_id: str, data: dict):
+    """
+    儲存 session JSON (到 GCS 或本地)
+    """
+    filename = f"{session_id}.json"
+    json_data = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+    
+    # 儲存到 GCS
+    if USE_GCS and storage_client:
+        try:
+            bucket = storage_client.bucket(GCS_BUCKET_NAME)
+            blob = bucket.blob(f"json/{filename}")
+            blob.upload_from_string(json_data, content_type="application/json")
+            print(f"✅ Session {session_id} saved to GCS")
+        except Exception as e:
+            print(f"Error saving to GCS: {e}")
+    
+    # 同時儲存到本地作為備份
+    session_file = SESSIONS_DIR / filename
+    with open(session_file, "wb") as f:
+        f.write(json_data)
+
+
+def update_session_history(session_id: str, image_url: str):
+    """
+    更新 session 的 history 記錄
+    """
+    # 載入現有 session
+    session_data = load_session_json(session_id)
+    
+    if not session_data:
+        # 建立新的 session
+        session_data = {
+            "id": session_id,
+            "created_at": datetime.now().isoformat(),
+            "history": []
+        }
+    
+    # 加入新的結果 URL
+    if "history" not in session_data:
+        session_data["history"] = []
+    
+    session_data["history"].append(image_url)
+    session_data["updated_at"] = datetime.now().isoformat()
+    
+    # 儲存
+    save_session_json(session_id, session_data)
+    
+    print(f"💾 Session {session_id}: {len(session_data['history'])} images")
+
+
+def generate_nano_banana(image_path: str, user_prompt: str, session_id: str = None, base_url: str = "http://localhost:8000") -> dict:
     """
     使用 Gemini 2.5 Flash 處理圖像
 
@@ -146,15 +300,21 @@ def generate_nano_banana(image_path: str, user_prompt: str, base_url: str = "htt
                     if getattr(part, "inline_data", None):
                         # 生成唯一檔名
                         image_filename = f"{uuid.uuid4()}.jpg"
-                        image_filepath = RESULT_DIR / image_filename
+                        image_data = part.inline_data.data
 
-                        # 儲存圖片
-                        with open(image_filepath, "wb") as f:
-                            f.write(part.inline_data.data)
-
-                        # 產生 URL
-                        image_url = f"{base_url}/images/{image_filename}"
+                        # 儲存圖片（GCS 或本地）
+                        image_url = save_file(image_data, image_filename, "result")
                         image_urls.append(image_url)
+                        
+                        # 同時儲存到本地作為備份
+                        if USE_GCS:
+                            local_path = RESULT_DIR / image_filename
+                            with open(local_path, "wb") as f:
+                                f.write(image_data)
+                        
+                        # 更新 session history
+                        if session_id:
+                            update_session_history(session_id, image_url)
 
         if image_urls:
             return {
@@ -216,7 +376,8 @@ async def upload_image(file: UploadFile = File(...)):
 @app.post("/api/edit")
 async def edit_image(
     file: UploadFile = File(...),
-    prompt: str = Form(...)
+    prompt: str = Form(...),
+    session_id: str = Form(None)
 ):
     """
     上傳圖片並直接編輯
@@ -244,6 +405,7 @@ async def edit_image(
         result = generate_nano_banana(
             image_path=str(file_path),
             user_prompt=prompt,
+            session_id=session_id,
             base_url=base_url
         )
 
@@ -341,16 +503,14 @@ async def get_session(session_id: str):
             "session": sessions[session_id]
         }
     
-    # 從檔案載入
-    session_file = SESSIONS_DIR / f"{session_id}.json"
-    if session_file.exists():
-        with open(session_file, "r") as f:
-            session_data = json.load(f)
-            sessions[session_id] = session_data
-            return {
-                "status": "success",
-                "session": session_data
-            }
+    # 從 GCS 或本地載入
+    session_data = load_session_json(session_id)
+    if session_data:
+        sessions[session_id] = session_data
+        return {
+            "status": "success",
+            "session": session_data
+        }
     
     raise HTTPException(status_code=404, detail="Session not found")
 
@@ -402,6 +562,20 @@ async def update_session(
         "status": "success",
         "session": sessions[session_id]
     }
+
+
+@app.get("/share/{session_id}")
+async def share_session(session_id: str):
+    """
+    分享頁面 - 顯示 session 的所有圖片
+    
+    Args:
+        session_id: Session ID
+        
+    Returns:
+        HTML: 分享頁面
+    """
+    return FileResponse(str(STATIC_DIR / "share.html"))
 
 
 if __name__ == "__main__":

@@ -628,9 +628,9 @@
         }
         
         function addFurniturePlacement(furniture, x, y) {
-            // 最多只能放 3 個 furniture
-            if (furniturePlacements.length >= 3) {
-                dr_talk("Maximum 3 furniture items allowed at once!");
+            // 最多只能放 4 個 furniture
+            if (furniturePlacements.length >= 4) {
+                dr_talk("Maximum 4 furniture items allowed at once!");
                 return;
             }
             
@@ -701,20 +701,16 @@
             try {
                 const furnitureCount = furniturePlacements.length;
                 
-                // 一律使用 1472x864 (只有左邊 288px 空白)
-                const canvasWidth = 1472;
+                // 不加空白，直接使用 1184x864
+                const canvasWidth = 1184;
                 const canvasHeight = 864;
-                const baseImageX = 288; // 底圖固定在 x=288
+                const baseImageX = 0; // 底圖從 x=0 開始
                 
                 // Create composite canvas
                 const compositeCanvas = document.createElement('canvas');
                 compositeCanvas.width = canvasWidth;
                 compositeCanvas.height = canvasHeight;
                 const compositeCtx = compositeCanvas.getContext('2d');
-                
-                // 填充白色背景
-                compositeCtx.fillStyle = '#FFFFFF';
-                compositeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
                 
                 // 載入並繪製底圖（history 最後一張）
                 if (history.length > 0) {
@@ -724,7 +720,7 @@
                         baseImg.onerror = reject;
                         baseImg.src = history[history.length - 1];
                     });
-                    compositeCtx.drawImage(baseImg, baseImageX, 0, 1184, 864);
+                    compositeCtx.drawImage(baseImg, 0, 0, 1184, 864);
                 }
                 
                 // 繪製 furniture items
@@ -741,22 +737,47 @@
                         })
                     );
                     
-                    // 全部放左邊 (最多 3 個)
-                    const leftCount = furnitureCount;
+                    // 在四個角落繪製家具和箭頭 (最多 4 個)
+                    // 角落位置：左上、右上、左下、右下
+                    const corners = [
+                        { x: 20, y: 20 },           // 左上
+                        { x: 1184 - 120, y: 20 },   // 右上
+                        { x: 20, y: 864 - 120 },    // 左下
+                        { x: 1184 - 120, y: 864 - 120 } // 右下
+                    ];
                     
-                    // 繪製左側 furniture (最多 3 個)
-                    for (let i = 0; i < leftCount; i++) {
+                    for (let i = 0; i < furnitureCount; i++) {
                         const item = furnitureImages[i];
-                        const y = i * 288;
+                        const placement = item.placement;
+                        const corner = corners[i];
                         
-                        // 繪製 furniture 圖片 (288x288)
-                        compositeCtx.drawImage(item.img, 0, y, 288, 288);
+                        // 家具圖示大小
+                        const furnitureSize = 100;
+                        const furnitureX = corner.x;
+                        const furnitureY = corner.y;
+                        
+                        // 繪製白色底
+                        compositeCtx.fillStyle = '#FFFFFF';
+                        compositeCtx.fillRect(furnitureX, furnitureY, furnitureSize, furnitureSize);
+                        
+                        // 繪製黑色框
+                        compositeCtx.strokeStyle = '#000000';
+                        compositeCtx.lineWidth = 3;
+                        compositeCtx.strokeRect(furnitureX, furnitureY, furnitureSize, furnitureSize);
+                        
+                        // 繪製 furniture 圖片在角落（稍微縮小一點，留出邊距）
+                        const padding = 5;
+                        compositeCtx.drawImage(item.img, 
+                            furnitureX + padding, 
+                            furnitureY + padding, 
+                            furnitureSize - padding * 2, 
+                            furnitureSize - padding * 2);
                         
                         // 繪製箭頭：從 furniture 中心到目標坐標
-                        const furnitureCenterX = 144;
-                        const furnitureCenterY = y + 144;
-                        const targetX = baseImageX + item.placement.x;
-                        const targetY = item.placement.y;
+                        const furnitureCenterX = furnitureX + furnitureSize / 2;
+                        const furnitureCenterY = furnitureY + furnitureSize / 2;
+                        const targetX = placement.x;
+                        const targetY = placement.y;
                         
                         // 畫線
                         compositeCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
@@ -845,6 +866,7 @@
                 const formData = new FormData();
                 formData.append('file', blob, 'design.png');
                 formData.append('prompt', fullPrompt);
+                formData.append('session_id', sessionId);
                 
                 // Call API
                 const response = await fetch('/api/edit', {
@@ -918,11 +940,15 @@
         }
         
         function handleShare() {
-            const shareUrl = `${window.location.origin}/?session=${sessionId}`;
+            const shareUrl = `${window.location.origin}/share/${sessionId}`;
             navigator.clipboard.writeText(shareUrl).then(() => {
-                dr_talk(`Session link copied to clipboard! Share this link: ${shareUrl}`);
+                dr_talk(`Share link copied to clipboard! 🎉`);
+                // Open in new tab
+                window.open(shareUrl, '_blank');
             }).catch(() => {
                 dr_talk(`Share this link: ${shareUrl}`);
+                // Open in new tab
+                window.open(shareUrl, '_blank');
             });
         }
         
