@@ -341,8 +341,8 @@
         }
         
         .loading-content img {
-            width: 200px;
-            height: 200px;
+            width: 288px;
+            height: 288px;
             animation: pulse 1.5s ease-in-out infinite;
         }
         
@@ -478,8 +478,8 @@
         <div class="right-panel">
             <div class="canvas-container">
                 <div class="session-info" id="sessionInfo">Session: Loading...</div>
-                <canvas id="mainCanvas" width="800" height="600"></canvas>
-                <canvas id="furnitureCanvas" width="800" height="600"></canvas>
+                <canvas id="mainCanvas" width="1184" height="864"></canvas>
+                <canvas id="furnitureCanvas" width="1184" height="864"></canvas>
             </div>
             
             <div class="furniture-selector">
@@ -619,7 +619,7 @@
             const imgPath = `/static/img/${starter}.png`;
             const img = new Image();
             img.onload = () => {
-                mainCtx.drawImage(img, 0, 0, 800, 600);
+                mainCtx.drawImage(img, 0, 0, 1184, 864);
                 history.push(imgPath);
                 starterModal.classList.add('hidden');
                 dr_talk("Great choice! Now you can add furniture by dragging items onto the canvas, or describe your vision in the text box below.");
@@ -647,7 +647,7 @@
         }
         
         function drawFurniturePlacements() {
-            furnitureCtx.clearRect(0, 0, 800, 600);
+            furnitureCtx.clearRect(0, 0, 1184, 864);
             
             furniturePlacements.forEach(placement => {
                 // Draw circle at placement point
@@ -700,20 +700,11 @@
             
             try {
                 const furnitureCount = furniturePlacements.length;
-                let canvasWidth = 800;
-                let canvasHeight = 600;
-                let furnitureOnLeft = false;
-                let furnitureOnRight = false;
                 
-                // 決定 canvas 尺寸和 furniture 位置
-                if (furnitureCount >= 1 && furnitureCount <= 3) {
-                    canvasWidth = 1000; // 800 + 200
-                    furnitureOnLeft = true;
-                } else if (furnitureCount >= 4 && furnitureCount <= 6) {
-                    canvasWidth = 1200; // 800 + 200 + 200
-                    furnitureOnLeft = true;
-                    furnitureOnRight = true;
-                }
+                // 一律使用 1760x864 (左右各 288px 空白)
+                const canvasWidth = 1760;
+                const canvasHeight = 864;
+                const baseImageX = 288; // 底圖固定在中間 (x=288)
                 
                 // Create composite canvas
                 const compositeCanvas = document.createElement('canvas');
@@ -725,12 +716,6 @@
                 compositeCtx.fillStyle = '#FFFFFF';
                 compositeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
                 
-                // 計算底圖位置（原圖 800x600）
-                let baseImageX = 0;
-                if (furnitureOnLeft) {
-                    baseImageX = 200; // 左邊有 furniture，底圖往右移
-                }
-                
                 // 載入並繪製底圖（history 最後一張）
                 if (history.length > 0) {
                     const baseImg = new Image();
@@ -739,7 +724,7 @@
                         baseImg.onerror = reject;
                         baseImg.src = history[history.length - 1];
                     });
-                    compositeCtx.drawImage(baseImg, baseImageX, 0, 800, 600);
+                    compositeCtx.drawImage(baseImg, baseImageX, 0, 1184, 864);
                 }
                 
                 // 繪製 furniture items
@@ -756,87 +741,89 @@
                         })
                     );
                     
-                    // 繪製左側 furniture (1-3)
-                    if (furnitureOnLeft) {
-                        const leftItems = furnitureImages.slice(0, 3);
-                        leftItems.forEach((item, index) => {
-                            const y = index * 200;
-                            // 繪製 furniture 圖片 (200x200)
-                            compositeCtx.drawImage(item.img, 0, y, 200, 200);
-                            
-                            // 繪製箭頭：從 furniture 中心到目標坐標
-                            const furnitureCenterX = 100;
-                            const furnitureCenterY = y + 100;
-                            const targetX = baseImageX + item.placement.x;
-                            const targetY = item.placement.y;
-                            
-                            // 畫線
-                            compositeCtx.strokeStyle = '#FF0000';
-                            compositeCtx.lineWidth = 3;
-                            compositeCtx.beginPath();
-                            compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
-                            compositeCtx.lineTo(targetX, targetY);
-                            compositeCtx.stroke();
-                            
-                            // 畫箭頭
-                            const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
-                            const arrowSize = 15;
-                            compositeCtx.fillStyle = '#FF0000';
-                            compositeCtx.beginPath();
-                            compositeCtx.moveTo(targetX, targetY);
-                            compositeCtx.lineTo(
-                                targetX - arrowSize * Math.cos(angle - Math.PI / 6),
-                                targetY - arrowSize * Math.sin(angle - Math.PI / 6)
-                            );
-                            compositeCtx.lineTo(
-                                targetX - arrowSize * Math.cos(angle + Math.PI / 6),
-                                targetY - arrowSize * Math.sin(angle + Math.PI / 6)
-                            );
-                            compositeCtx.closePath();
-                            compositeCtx.fill();
-                        });
+                    // 決定左右分配：1-3個放左邊，4-6個放右邊
+                    const leftCount = Math.min(furnitureCount, 3);
+                    const rightCount = Math.max(0, furnitureCount - 3);
+                    
+                    // 繪製左側 furniture (最多 3 個)
+                    for (let i = 0; i < leftCount; i++) {
+                        const item = furnitureImages[i];
+                        const y = i * 288;
+                        
+                        // 繪製 furniture 圖片 (288x288)
+                        compositeCtx.drawImage(item.img, 0, y, 288, 288);
+                        
+                        // 繪製箭頭：從 furniture 中心到目標坐標
+                        const furnitureCenterX = 144;
+                        const furnitureCenterY = y + 144;
+                        const targetX = baseImageX + item.placement.x;
+                        const targetY = item.placement.y;
+                        
+                        // 畫線
+                        compositeCtx.strokeStyle = '#FF0000';
+                        compositeCtx.lineWidth = 3;
+                        compositeCtx.beginPath();
+                        compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
+                        compositeCtx.lineTo(targetX, targetY);
+                        compositeCtx.stroke();
+                        
+                        // 畫箭頭
+                        const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
+                        const arrowSize = 15;
+                        compositeCtx.fillStyle = '#FF0000';
+                        compositeCtx.beginPath();
+                        compositeCtx.moveTo(targetX, targetY);
+                        compositeCtx.lineTo(
+                            targetX - arrowSize * Math.cos(angle - Math.PI / 6),
+                            targetY - arrowSize * Math.sin(angle - Math.PI / 6)
+                        );
+                        compositeCtx.lineTo(
+                            targetX - arrowSize * Math.cos(angle + Math.PI / 6),
+                            targetY - arrowSize * Math.sin(angle + Math.PI / 6)
+                        );
+                        compositeCtx.closePath();
+                        compositeCtx.fill();
                     }
                     
-                    // 繪製右側 furniture (4-6)
-                    if (furnitureOnRight) {
-                        const rightItems = furnitureImages.slice(3, 6);
-                        rightItems.forEach((item, index) => {
-                            const x = 1000; // 800 + 200
-                            const y = index * 200;
-                            // 繪製 furniture 圖片 (200x200)
-                            compositeCtx.drawImage(item.img, x, y, 200, 200);
-                            
-                            // 繪製箭頭：從 furniture 中心到目標坐標
-                            const furnitureCenterX = x + 100;
-                            const furnitureCenterY = y + 100;
-                            const targetX = baseImageX + item.placement.x;
-                            const targetY = item.placement.y;
-                            
-                            // 畫線
-                            compositeCtx.strokeStyle = '#FF0000';
-                            compositeCtx.lineWidth = 3;
-                            compositeCtx.beginPath();
-                            compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
-                            compositeCtx.lineTo(targetX, targetY);
-                            compositeCtx.stroke();
-                            
-                            // 畫箭頭
-                            const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
-                            const arrowSize = 15;
-                            compositeCtx.fillStyle = '#FF0000';
-                            compositeCtx.beginPath();
-                            compositeCtx.moveTo(targetX, targetY);
-                            compositeCtx.lineTo(
-                                targetX - arrowSize * Math.cos(angle - Math.PI / 6),
-                                targetY - arrowSize * Math.sin(angle - Math.PI / 6)
-                            );
-                            compositeCtx.lineTo(
-                                targetX - arrowSize * Math.cos(angle + Math.PI / 6),
-                                targetY - arrowSize * Math.sin(angle + Math.PI / 6)
-                            );
-                            compositeCtx.closePath();
-                            compositeCtx.fill();
-                        });
+                    // 繪製右側 furniture (第 4-6 個)
+                    for (let i = 0; i < rightCount; i++) {
+                        const item = furnitureImages[3 + i];
+                        const x = 1472; // 1184 + 288
+                        const y = i * 288;
+                        
+                        // 繪製 furniture 圖片 (288x288)
+                        compositeCtx.drawImage(item.img, x, y, 288, 288);
+                        
+                        // 繪製箭頭：從 furniture 中心到目標坐標
+                        const furnitureCenterX = x + 144;
+                        const furnitureCenterY = y + 144;
+                        const targetX = baseImageX + item.placement.x;
+                        const targetY = item.placement.y;
+                        
+                        // 畫線
+                        compositeCtx.strokeStyle = '#FF0000';
+                        compositeCtx.lineWidth = 3;
+                        compositeCtx.beginPath();
+                        compositeCtx.moveTo(furnitureCenterX, furnitureCenterY);
+                        compositeCtx.lineTo(targetX, targetY);
+                        compositeCtx.stroke();
+                        
+                        // 畫箭頭
+                        const angle = Math.atan2(targetY - furnitureCenterY, targetX - furnitureCenterX);
+                        const arrowSize = 15;
+                        compositeCtx.fillStyle = '#FF0000';
+                        compositeCtx.beginPath();
+                        compositeCtx.moveTo(targetX, targetY);
+                        compositeCtx.lineTo(
+                            targetX - arrowSize * Math.cos(angle - Math.PI / 6),
+                            targetY - arrowSize * Math.sin(angle - Math.PI / 6)
+                        );
+                        compositeCtx.lineTo(
+                            targetX - arrowSize * Math.cos(angle + Math.PI / 6),
+                            targetY - arrowSize * Math.sin(angle + Math.PI / 6)
+                        );
+                        compositeCtx.closePath();
+                        compositeCtx.fill();
                     }
                 }
                 
@@ -846,10 +833,12 @@
                 // Build prompt
                 let fullPrompt = prompt;
                 
+                
                 if (furniturePlacements.length > 0) {
-                    fullPrompt += 'please move there objects into the image in the center, fellow the red lines. '
-                    fullPrompt += 'after move objects to the place, you can delete the white area, keep only center image. you can made it natural by change the object\' light or direction' ;
-                    fullPrompt += '\n\nFurniture placements: ';
+                    fullPrompt += '這是一張我家的平面圖，旁邊附有家具清單。請將清單上的家具物件精確地移動到平面圖中，並放置在紅線所指示的對應位置上。移動完成後，請刪除所有紅線、家具清單以及左右的空白區域，使圖片只剩下填充家具後的平面圖。';
+                    //fullPrompt += 'please move there objects into the image in the center, fellow the red lines. '
+                    //fullPrompt += 'after move objects to the place, you can delete the white area, keep only center image. you can made it natural by change the object\' light or direction' ;
+                    //fullPrompt += '\n\nFurniture placements: ';
                     // furniturePlacements.forEach(p => {
                     //     fullPrompt += `${p.id} at position (${Math.round(p.x)}, ${Math.round(p.y)}); `;
                     // });
@@ -906,13 +895,13 @@
                     // Load new image
                     const newImg = new Image();
                     newImg.onload = () => {
-                        mainCtx.clearRect(0, 0, 800, 600);
-                        mainCtx.drawImage(newImg, 0, 0, 800, 600);
+                        mainCtx.clearRect(0, 0, 1184, 864);
+                        mainCtx.drawImage(newImg, 0, 0, 1184, 864);
                         history.push(data.image_urls[0]);
                         
                         // Clear furniture placements
                         furniturePlacements = [];
-                        furnitureCtx.clearRect(0, 0, 800, 600);
+                        furnitureCtx.clearRect(0, 0, 1184, 864);
                         
                         // Clear input
                         userInput.value = '';

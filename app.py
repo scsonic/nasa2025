@@ -121,6 +121,9 @@ def generate_nano_banana(image_path: str, user_prompt: str, base_url: str = "htt
             top_p=0.95,
             max_output_tokens=32768,
             response_modalities=["TEXT", "IMAGE"],
+            image_config=types.ImageConfig(
+                aspect_ratio="4:3",
+            )
         )
 
         # 呼叫 Gemini API
@@ -128,7 +131,7 @@ def generate_nano_banana(image_path: str, user_prompt: str, base_url: str = "htt
         text_output = []
 
         for chunk in client.models.generate_content_stream(
-            model="gemini-2.5-flash-image-preview",
+            model="gemini-2.5-flash-image",
             contents=contents,
             config=config
         ):
