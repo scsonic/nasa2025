@@ -154,6 +154,41 @@
             margin-top: auto;
         }
         
+        .example-prompts {
+            margin-bottom: 15px;
+        }
+        
+        .example-prompts h4 {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .prompt-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .prompt-chip {
+            background: #2a2a3e;
+            border: 1px solid #444;
+            border-radius: 15px;
+            padding: 6px 12px;
+            font-size: 0.85em;
+            color: #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .prompt-chip:hover {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
         .input-section label {
             display: block;
             margin-bottom: 8px;
@@ -419,6 +454,111 @@
             background: #667eea;
             color: white;
         }
+        
+        /* Share Overlay */
+        .share-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .share-overlay.show {
+            display: flex;
+        }
+        
+        .share-modal {
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .share-modal .close-x {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 24px;
+            line-height: 30px;
+            text-align: center;
+            transition: color 0.3s;
+        }
+        
+        .share-modal .close-x:hover {
+            color: #fff;
+        }
+        
+        .share-modal h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .share-modal p {
+            color: #ddd;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .share-link-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .share-link-input {
+            flex: 1;
+            padding: 12px;
+            background: #1a1a2e;
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95em;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+        
+        .share-link-input:hover {
+            border-color: #667eea;
+        }
+        
+        .copy-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        
+        .copy-btn.copied {
+            background: #4caf50;
+        }
     </style>
 </head>
 <body>
@@ -464,6 +604,17 @@
             </div>
             
             <div class="input-section">
+                <div class="example-prompts">
+                    <h4>💡 Example Requests (Click to add):</h4>
+                    <div class="prompt-chips">
+                        <div class="prompt-chip" onclick="addExamplePrompt('Add some plants on the right side')">🌱 Add plants on the right</div>
+                        <div class="prompt-chip" onclick="addExamplePrompt('Make the lighting warmer and more cozy')">💡 Warmer lighting</div>
+                        <div class="prompt-chip" onclick="addExamplePrompt('Add a large window showing Earth view')">🌍 Add Earth view window</div>
+                        <div class="prompt-chip" onclick="addExamplePrompt('Place a workstation with monitors on the left')">💻 Add workstation</div>
+                        <div class="prompt-chip" onclick="addExamplePrompt('Add floating storage modules on the walls')">📦 Floating storage</div>
+                    </div>
+                </div>
+                
                 <label for="userInput">Your Design Request:</label>
                 <textarea id="userInput" placeholder="Describe what you want to add or change..."></textarea>
                 <button class="submit-btn" id="submitBtn">Submit</button>
@@ -495,7 +646,7 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
             <img src="/static/img/construction.png" alt="Construction">
-            <p style="font-size: 1.5em; margin-bottom: 15px;">Generating... Please wait</p>
+            <p style="font-size: 1.5em; margin-bottom: 15px;">🏗️ Under Construction... Please Wait</p>
             <p style="font-size: 1em; color: #ffeb3b; margin-bottom: 8px;">⚠️ Note: This feature is powered by Google Nano Banana API</p>
             <p style="font-size: 0.95em; color: #ddd; margin-bottom: 8px;">The generated image may not match your expectations. Please try a few times.</p>
             <p style="font-size: 0.95em; color: #ddd;">Please wait 5-10 seconds for the image to be generated.</p>
@@ -508,6 +659,19 @@
         <div class="debug-controls">
             <button class="close-btn" onclick="closeDebugPreview()">Close (Cancel)</button>
             <button class="continue-btn" onclick="continueFromDebug()">Continue to API</button>
+        </div>
+    </div>
+    
+    <!-- Share Overlay -->
+    <div class="share-overlay" id="shareOverlay" onclick="closeShareOverlay(event)">
+        <div class="share-modal" onclick="event.stopPropagation()">
+            <div class="close-x" onclick="closeShareOverlay()">×</div>
+            <h2>🔗 Share Your Design</h2>
+            <p>This is your share link. You can share it with your friends.<br>Only people with this link can view your designs.</p>
+            <div class="share-link-container">
+                <a id="shareLinkInput" class="share-link-input" href="" target="_blank"></a>
+                <button class="copy-btn" id="copyBtn" onclick="copyShareLink()">Copy</button>
+            </div>
         </div>
     </div>
 
@@ -643,7 +807,7 @@
                 mainCtx.drawImage(img, 0, 0, 1184, 864);
                 history.push(imgPath);
                 starterModal.classList.add('hidden');
-                dr_talk("Great choice! Now you can add furniture by dragging items onto the canvas, or describe your vision in the text box below.");
+                dr_talk("Hello! I'm Dr. Bubu, your design assistant. You can tell me your requirements in text, or let me know how you want to arrange the furniture. I'm here to help you modify your space!");
             };
             img.src = imgPath;
         }
@@ -962,16 +1126,67 @@
         }
         
         function handleShare() {
+            // 檢查是否有提交過
+            if (history.length <= 1) {
+                alert('Please submit your design request first!');
+                dr_talk('Please submit your design request first before sharing.');
+                return;
+            }
+            
+            // 顯示分享 overlay
             const shareUrl = `${window.location.origin}/share/${sessionId}`;
+            const shareLinkInput = document.getElementById('shareLinkInput');
+            const shareOverlay = document.getElementById('shareOverlay');
+            
+            shareLinkInput.textContent = shareUrl;
+            shareLinkInput.href = shareUrl;
+            shareOverlay.classList.add('show');
+        }
+        
+        function closeShareOverlay(event) {
+            const shareOverlay = document.getElementById('shareOverlay');
+            shareOverlay.classList.remove('show');
+        }
+        
+        function copyShareLink() {
+            const shareLinkInput = document.getElementById('shareLinkInput');
+            const copyBtn = document.getElementById('copyBtn');
+            const shareUrl = shareLinkInput.textContent;
+            
             navigator.clipboard.writeText(shareUrl).then(() => {
-                dr_talk(`Share link copied to clipboard! 🎉`);
-                // Open in new tab
-                window.open(shareUrl, '_blank');
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+                
+                dr_talk('Share link copied to clipboard! 🎉');
             }).catch(() => {
-                dr_talk(`Share this link: ${shareUrl}`);
-                // Open in new tab
-                window.open(shareUrl, '_blank');
+                dr_talk('Failed to copy link. Please copy it manually.');
             });
+        }
+        
+        // Add example prompt to textarea
+        function addExamplePrompt(promptText) {
+            const confirmed = confirm(`Add this request?\n\n"${promptText}"\n\nClick OK to add to your design request.`);
+            
+            if (confirmed) {
+                const currentText = userInput.value.trim();
+                if (currentText) {
+                    userInput.value = currentText + '\n' + promptText;
+                } else {
+                    userInput.value = promptText;
+                }
+                
+                // Mark as dirty
+                isDirty = true;
+                updateSubmitButton();
+                
+                // Dr. Bubu response
+                dr_talk(`Great! I've added "${promptText}" to your request. Feel free to modify it or add more details!`);
+            }
         }
         
         // Dr. Bubu talking animation
