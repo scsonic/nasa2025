@@ -808,8 +808,10 @@
     </div>
 
     <script>
-        // Debug flag
-        const DEBUG = true;
+        // Debug flag - only enable on localhost
+        const DEBUG = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1' || 
+                      window.location.hostname === '';
         
         // Global state
         let sessionId = '';
