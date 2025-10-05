@@ -559,6 +559,123 @@
         .copy-btn.copied {
             background: #4caf50;
         }
+        
+        /* Size Selector Popup */
+        .size-selector-overlay {
+            position: fixed;
+            display: none;
+            z-index: 1500;
+        }
+        
+        .size-selector-overlay.show {
+            display: block;
+        }
+        
+        .size-selector-modal {
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            border-radius: 10px;
+            padding: 12px;
+            width: 240px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            text-align: center;
+            border: 2px solid #667eea;
+        }
+        
+        .size-slider-container {
+            margin: 8px 0;
+        }
+        
+        .size-slider-container label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #ddd;
+            font-size: 0.9em;
+        }
+        
+        .size-value {
+            color: #667eea;
+            font-size: 1em;
+            font-weight: bold;
+        }
+        
+        .size-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #1a1a2e;
+            outline: none;
+            -webkit-appearance: none;
+            margin: 15px 0;
+        }
+        
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+        }
+        
+        .size-slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+        }
+        
+        .size-selector-buttons {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        .size-selector-buttons button {
+            flex: 1;
+            padding: 8px 6px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .size-cancel-btn {
+            background: #555;
+            color: #ddd;
+        }
+        
+        .size-cancel-btn:hover {
+            background: #666;
+            transform: translateY(-2px);
+        }
+        
+        .size-delete-btn {
+            background: #d32f2f;
+            color: white;
+        }
+        
+        .size-delete-btn:hover {
+            background: #b71c1c;
+            transform: translateY(-2px);
+        }
+        
+        .size-confirm-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .size-confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -674,6 +791,21 @@
             </div>
         </div>
     </div>
+    
+    <!-- Size Selector Popup -->
+    <div class="size-selector-overlay" id="sizeSelectorOverlay">
+        <div class="size-selector-modal">
+            <div class="size-slider-container">
+                <label>Size: <span class="size-value" id="sizeValue">150</span>px</label>
+                <input type="range" min="100" max="250" value="150" class="size-slider" id="sizeSlider">
+            </div>
+            <div class="size-selector-buttons">
+                <button class="size-delete-btn" onclick="deleteFurniture()">Delete</button>
+                <button class="size-cancel-btn" onclick="cancelSizeSelection()">Cancel</button>
+                <button class="size-confirm-btn" onclick="confirmSizeSelection()">OK</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Debug flag
@@ -687,6 +819,8 @@
         let isDirty = false;
         let selectedFurniture = null;
         let currentStarterImage = null;
+        let pendingFurniture = null; // 暫存待確認的家具
+        let editingFurnitureIndex = -1; // 正在編輯的家具索引
         
         // Canvas elements
         const mainCanvas = document.getElementById('mainCanvas');
@@ -710,7 +844,7 @@
         
         // Furniture placement visualization settings
         const FURNITURE_DISPLAY = {
-            itemSize: 100,           // 圖片大小
+            defaultSize: 150,        // 預設圖片大小
             text: 'move this object here',  // 顯示文字
             arrowLength: 40,         // 箭頭長度
             fontSize: 14,            // 文字大小
@@ -803,8 +937,66 @@
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
                     
-                    addFurniturePlacement(selectedFurniture, x, y);
+                    // 直接添加家具，使用預設大小
+                    addFurniturePlacement(selectedFurniture, x, y, FURNITURE_DISPLAY.defaultSize);
                     selectedFurniture = null;
+                }
+            });
+            
+            // Click on furniture to edit size
+            furnitureCanvas.addEventListener('click', (e) => {
+                const rect = furnitureCanvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                
+                // 檢查是否點擊到家具
+                for (let i = furniturePlacements.length - 1; i >= 0; i--) {
+                    const placement = furniturePlacements[i];
+                    const size = placement.size || FURNITURE_DISPLAY.defaultSize;
+                    const halfSize = size / 2;
+                    
+                    // 檢查點擊位置是否在家具圖片範圍內
+                    const isTopQuarter = placement.y < (864 / 4);
+                    let imgY;
+                    
+                    if (isTopQuarter) {
+                        imgY = placement.y - FURNITURE_DISPLAY.arrowLength - FURNITURE_DISPLAY.spacing - size - FURNITURE_DISPLAY.spacing;
+                    } else {
+                        imgY = placement.y - size - FURNITURE_DISPLAY.spacing * 2 - FURNITURE_DISPLAY.fontSize - FURNITURE_DISPLAY.arrowLength;
+                    }
+                    
+                    if (clickX >= placement.x - halfSize && clickX <= placement.x + halfSize &&
+                        clickY >= imgY && clickY <= imgY + size) {
+                        // 點擊到家具，顯示尺寸選擇器
+                        editingFurnitureIndex = i;
+                        const furniture = {
+                            id: placement.id,
+                            src: placement.src
+                        };
+                        showSizeSelector(furniture, placement.x, placement.y, e.clientX, e.clientY, placement.size);
+                        return;
+                    }
+                }
+                
+                // 點擊其他地方，關閉 popup
+                if (document.getElementById('sizeSelectorOverlay').classList.contains('show')) {
+                    cancelSizeSelection();
+                }
+            });
+            
+            // Size slider event
+            const sizeSlider = document.getElementById('sizeSlider');
+            const sizeValue = document.getElementById('sizeValue');
+            
+            sizeSlider.addEventListener('input', (e) => {
+                const size = e.target.value;
+                sizeValue.textContent = size;
+                
+                // 即時更新正在編輯的家具大小預覽
+                if (editingFurnitureIndex >= 0) {
+                    const tempSize = parseInt(size);
+                    furniturePlacements[editingFurnitureIndex].tempSize = tempSize;
+                    drawFurniturePlacements();
                 }
             });
         }
@@ -821,7 +1013,91 @@
             img.src = imgPath;
         }
         
-        function addFurniturePlacement(furniture, x, y) {
+        function showSizeSelector(furniture, x, y, screenX, screenY, currentSize = null) {
+            // 儲存待確認的家具資訊
+            pendingFurniture = {
+                furniture: furniture,
+                x: x,
+                y: y
+            };
+            
+            // 設置 slider
+            const sizeSlider = document.getElementById('sizeSlider');
+            const sizeValue = document.getElementById('sizeValue');
+            const overlay = document.getElementById('sizeSelectorOverlay');
+            
+            const initialSize = currentSize || FURNITURE_DISPLAY.defaultSize;
+            sizeSlider.value = initialSize;
+            sizeValue.textContent = initialSize;
+            
+            // 計算 popup 位置（顯示在點擊位置下方）
+            const popupWidth = 240;
+            const popupHeight = 120;
+            let left = screenX - popupWidth / 2;
+            let top = screenY + 20;
+            
+            // 確保不超出視窗邊界
+            if (left < 10) left = 10;
+            if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+            if (top + popupHeight > window.innerHeight - 10) top = screenY - popupHeight - 20;
+            
+            overlay.style.left = left + 'px';
+            overlay.style.top = top + 'px';
+            
+            // 顯示 overlay
+            overlay.classList.add('show');
+        }
+        
+        function cancelSizeSelection() {
+            // 如果正在編輯，恢復原始大小
+            if (editingFurnitureIndex >= 0) {
+                delete furniturePlacements[editingFurnitureIndex].tempSize;
+                drawFurniturePlacements();
+            }
+            
+            pendingFurniture = null;
+            editingFurnitureIndex = -1;
+            document.getElementById('sizeSelectorOverlay').classList.remove('show');
+        }
+        
+        function confirmSizeSelection() {
+            if (!pendingFurniture && editingFurnitureIndex === -1) return;
+            
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            
+            if (editingFurnitureIndex >= 0) {
+                // 編輯現有家具
+                furniturePlacements[editingFurnitureIndex].size = size;
+                delete furniturePlacements[editingFurnitureIndex].tempSize;
+                editingFurnitureIndex = -1;
+            }
+            
+            isDirty = true;
+            updateSubmitButton();
+            drawFurniturePlacements();
+            
+            // 關閉 overlay
+            pendingFurniture = null;
+            document.getElementById('sizeSelectorOverlay').classList.remove('show');
+        }
+        
+        function deleteFurniture() {
+            if (editingFurnitureIndex >= 0) {
+                // 刪除家具
+                furniturePlacements.splice(editingFurnitureIndex, 1);
+                editingFurnitureIndex = -1;
+                
+                isDirty = furniturePlacements.length > 0 || userInput.value.trim().length > 0;
+                updateSubmitButton();
+                drawFurniturePlacements();
+                
+                // 關閉 overlay
+                pendingFurniture = null;
+                document.getElementById('sizeSelectorOverlay').classList.remove('show');
+            }
+        }
+        
+        function addFurniturePlacement(furniture, x, y, size = FURNITURE_DISPLAY.defaultSize) {
             // 最多只能放 4 個 furniture
             if (furniturePlacements.length >= 4) {
                 dr_talk("Maximum 4 furniture items allowed at once!");
@@ -832,7 +1108,8 @@
                 id: furniture.id,
                 src: furniture.src,
                 x: x,
-                y: y
+                y: y,
+                size: size
             });
             
             isDirty = true;
@@ -844,7 +1121,8 @@
             furnitureCtx.clearRect(0, 0, 1184, 864);
             
             furniturePlacements.forEach(placement => {
-                const itemSize = FURNITURE_DISPLAY.itemSize;
+                // 使用 tempSize（拖動時的臨時大小）或正式的 size
+                const itemSize = placement.tempSize || placement.size || FURNITURE_DISPLAY.defaultSize;
                 const text = FURNITURE_DISPLAY.text;
                 const arrowLength = FURNITURE_DISPLAY.arrowLength;
                 const fontSize = FURNITURE_DISPLAY.fontSize;
@@ -1027,7 +1305,7 @@
                         const item = furnitureImages[i];
                         const placement = item.placement;
                         
-                        const itemSize = FURNITURE_DISPLAY.itemSize;
+                        const itemSize = placement.size || FURNITURE_DISPLAY.defaultSize;
                         const text = FURNITURE_DISPLAY.text;
                         const arrowLength = FURNITURE_DISPLAY.arrowLength;
                         const fontSize = FURNITURE_DISPLAY.fontSize;
