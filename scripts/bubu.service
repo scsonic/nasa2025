@@ -1,0 +1,37 @@
+[Unit]
+Description=Nano Banana API Service (Dr. Bubu)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/nasa2025
+Environment="PATH=/var/www/html/nasa2025/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+
+# 啟動命令
+ExecStart=/var/www/html/nasa2025/start.sh
+
+# 重啟策略
+Restart=always
+RestartSec=10
+StartLimitInterval=5min
+StartLimitBurst=5
+
+# 安全性設定
+NoNewPrivileges=true
+PrivateTmp=true
+
+# 日誌設定
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bubu
+
+# 資源限制 (可根據需求調整)
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
