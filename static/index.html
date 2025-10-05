@@ -849,7 +849,7 @@
             defaultSize: 150,        // 預設圖片大小
             text: 'move this object here',  // 顯示文字
             arrowLength: 40,         // 箭頭長度
-            fontSize: 14,            // 文字大小
+            fontSize: 16,            // 文字大小
             spacing: 5               // 元素之間的間距
         };
         
@@ -1225,12 +1225,6 @@
                     furnitureCtx.closePath();
                     furnitureCtx.fill();
                 }
-                
-                // 繪製目標點
-                furnitureCtx.fillStyle = '#FF0000';
-                furnitureCtx.beginPath();
-                furnitureCtx.arc(placement.x, placement.y, 5, 0, Math.PI * 2);
-                furnitureCtx.fill();
             });
         }
         
@@ -1392,12 +1386,6 @@
                             compositeCtx.closePath();
                             compositeCtx.fill();
                         }
-                        
-                        // 繪製目標點
-                        compositeCtx.fillStyle = '#FF0000';
-                        compositeCtx.beginPath();
-                        compositeCtx.arc(placement.x, placement.y, 5, 0, Math.PI * 2);
-                        compositeCtx.fill();
                     }
                 }
                 
@@ -1412,9 +1400,10 @@
                 
                 if (furniturePlacements.length > 0) {
                     fullPrompt = 'You are doing interior design. '
-                    fullPrompt += 'please move there objects into the image in the center, fellow the red lines. '
-                    fullPrompt += 'Carefully remove the object or area highlighted in semi-transparent red, and realistically fill in the background (inpainting)';
-                    fullPrompt += ' In the area highlighted in semi-transparent red, Make it look natural and seamless.';
+                    fullPrompt += 'please move there object, fellow the red lines  '
+                    fullPrompt += ' and realistically fill in the white background (inpainting).';
+                    fullPrompt += ' You can adjust the position or relight it to make it look natural. '
+                
                     
                     //fullPrompt += 'after move objects to the place, you can delete the white area, keep only center image. you can made it natural by change the object\' light or direction' ;
                     //fullPrompt += '\n\nFurniture placements: ';
